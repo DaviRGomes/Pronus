@@ -27,39 +27,102 @@ public class ChatService {
         this.profissionalRepository = profissionalRepository;
     }
 
-    // --- Métodos de Criação (CREATE) ---
-
     /**
      * Cria um novo chat após validar os participantes.
-     * @param chat O objeto de chat a ser criado.
-     * @return O chat salvo com seu ID.
      */
     public ChatEntity criar(ChatEntity chat) {
-        // 1. Validação da ESTRUTURA do objeto (o "Porteiro")
+        // validacao da estrutura
         validarDadosDoChat(chat);
 
-        // 2. Validação da INTEGRIDADE dos dados (o "Verificador de Sistema")
-        ClienteEntity cliente = clienteRepository.findById(chat.getCliente().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Cliente não encontrado com o ID: " + chat.getCliente().getId()));
+        // Validacao da integridade do cliente
+        Optional<ClienteEntity> optionalCliente = clienteRepository.findById(chat.getCliente().getId());
+        if (optionalCliente.isEmpty()) {
+            throw new EntityNotFoundException("Cliente não encontrado com o ID: " + chat.getCliente().getId());
+        }
+        ClienteEntity cliente = optionalCliente.get();
 
-        ProfissionalEntity profissional = profissionalRepository.findById(chat.getProfissional().getId())
-                .orElseThrow(() -> new EntityNotFoundException("Profissional não encontrado com o ID: " + chat.getProfissional().getId()));
+        // validacao da integridade do profissional
+        Optional<ProfissionalEntity> optionalProfissional = profissionalRepository.findById(chat.getProfissional().getId());
+        if (optionalProfissional.isEmpty()) {
+            throw new EntityNotFoundException("Profissional não encontrado com o ID: " + chat.getProfissional().getId());
+        }
+        ProfissionalEntity profissional = optionalProfissional.get();
         
-        // 3. Garante que a entidade a ser salva está ligada às entidades do banco
         chat.setCliente(cliente);
         chat.setProfissional(profissional);
 
-        // 4. Salva no banco de dados
         return chatRepository.save(chat);
     }
 
+    /**
+     * Atualiza um chat existente.
+     */
+    public ChatEntity atualizar(Long id, ChatEntity chatAtualizado) {
 
-    // --- Métodos Privados de Validação ---
+        Optional<ChatEntity> optionalChat = chatRepository.findById(id);
+
+        if (optionalChat.isEmpty()) {
+            throw new EntityNotFoundException("Chat não encontrado com o ID: " + id);
+        }
+
+        ChatEntity chatExistente = optionalChat.get();
+
+        chatExistente.setDuracao(chatAtualizado.getDuracao());
+        chatExistente.setConversa(chatAtualizado.getConversa());
+
+        return chatRepository.save(chatExistente);
+    }
 
     /**
-     * Valida os dados básicos de um objeto ChatEntity.
-     * @param chat O chat a ser validado.
+     * Deleta um chat pelo seu ID.
      */
+    public void deletar(Long id) {
+        
+        if (!chatRepository.existsById(id)) {
+            throw new EntityNotFoundException("Chat não encontrado com o ID: " + id);
+        }
+        
+        chatRepository.deleteById(id);
+    }
+
+    /**
+     * Busca todos os chats cadastrados.
+     */
+    public List<ChatEntity> buscarTodos() {
+        return chatRepository.findAll();
+    }
+
+    /**
+     * Busca um chat específico pelo seu ID.
+     */
+    public Optional<ChatEntity> buscarPorId(Long id) {
+        return chatRepository.findById(id);
+    }
+
+    /**
+     * Busca todos os chats de um cliente específico.
+     */
+    public List<ChatEntity> buscarPorClienteId(Long clienteId) {
+        return chatRepository.findByClienteId(clienteId);
+    }
+
+    /**
+     * Busca todos os chats de um profissional específico.
+     */
+    public List<ChatEntity> buscarPorProfissionalId(Long profissionalId) {
+        return chatRepository.findByProfissionalId(profissionalId);
+    }
+
+    /**
+     * Busca chats com duração maior que um valor especificado.
+     */
+    public List<ChatEntity> buscarComDuracaoMaiorQue(Integer minutos) {
+        if (minutos == null || minutos < 0) {
+            throw new IllegalArgumentException("A duração em minutos deve ser um número positivo.");
+        }
+        return chatRepository.findByDuracaoGreaterThan(minutos);
+    }
+
     private void validarDadosDoChat(ChatEntity chat) {
         if (chat == null) {
             throw new IllegalArgumentException("O objeto de chat não pode ser nulo.");

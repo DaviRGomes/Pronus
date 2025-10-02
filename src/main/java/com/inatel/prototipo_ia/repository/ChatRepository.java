@@ -31,5 +31,9 @@ public interface ChatRepository extends JpaRepository<ChatEntity, Long> {
     // Buscar chats por ID do profissional
     List<ChatEntity> findByProfissionalId(Long profissionalId);
     
-    // Métodos de busca específicos temporariamente removidos
+    // Verifica se existe um chat associado a um ID de cliente.
+    boolean existsByClienteId(Long clienteId);
+
+    // Verifica se existe um chat associado a um ID de profissional.
+    boolean existsByProfissionalId(Long profissionalId);
 }

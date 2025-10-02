@@ -1,57 +1,110 @@
 package com.inatel.prototipo_ia.service;
 
 import com.inatel.prototipo_ia.entity.RelatorioEntity;
-import com.inatel.prototipo_ia.entity.ChatEntity;
+import com.inatel.prototipo_ia.repository.ChatRepository;
 import com.inatel.prototipo_ia.repository.RelatorioRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class RelatorioService {
 
-    private final RelatorioRepository repository;
+    private final RelatorioRepository relatorioRepository;
+    private final ChatRepository chatRepository;
 
-    public RelatorioService(RelatorioRepository repository) {
-        this.repository = repository;
+    public RelatorioService(RelatorioRepository relatorioRepository, ChatRepository chatRepository) {
+        this.relatorioRepository = relatorioRepository;
+        this.chatRepository = chatRepository;
     }
 
-    // Criar relatório
+    /**
+     * Cria um novo relatório para um chat, garante que o chat não tenha outro relatório.
+     */
     public RelatorioEntity criar(RelatorioEntity relatorio) {
-        return repository.save(relatorio);
+        validarRelatorio(relatorio);
+
+        Long chatId = relatorio.getChat().getId();
+
+        if (!chatRepository.existsById(chatId)) {
+            throw new EntityNotFoundException("Não é possível criar o relatório pois o chat com ID " + chatId + " não foi encontrado.");
+        }
+        if (relatorioRepository.existsByChatId(chatId)) {
+            throw new IllegalStateException("O chat com ID " + chatId + " já possui um relatório associado.");
+        }
+
+        return relatorioRepository.save(relatorio);
     }
 
-    // Buscar todos os relatórios
+    /**
+     * Busca todos os relatórios.
+     */
     public List<RelatorioEntity> buscarTodos() {
-        return repository.findAll();
+        return relatorioRepository.findAll();
     }
 
-    // Buscar relatório por ID
+    /**
+     * Busca um relatório pelo seu ID.
+     */
     public Optional<RelatorioEntity> buscarPorId(Long id) {
-        return repository.findById(id);
+        return relatorioRepository.findById(id);
     }
 
-    // Buscar relatório por chat
-    public Optional<RelatorioEntity> buscarPorChat(ChatEntity chat) {
-        return repository.findByChat(chat);
-    }
-
-    // Buscar relatório por ID do chat
+    /**
+     * Busca o relatório de um chat específico.
+     */
     public Optional<RelatorioEntity> buscarPorChatId(Long chatId) {
-        return repository.findByChatId(chatId);
+        return relatorioRepository.findByChatId(chatId);
     }
 
-    // Métodos de busca específicos foram temporariamente removidos para resolver problemas de inicialização
+    /**
+     * Atualiza os dados de um relatório existente.
+     */
+    public RelatorioEntity atualizar(Long id, RelatorioEntity relatorioAtualizado) {
+        Optional<RelatorioEntity> optionalRelatorio = relatorioRepository.findById(id);
+        if (optionalRelatorio.isEmpty()) {
+            throw new EntityNotFoundException("Relatório não encontrado com o ID: " + id);
+        }
 
-    // Atualizar relatório
-    public RelatorioEntity atualizar(RelatorioEntity relatorio) {
-        return repository.save(relatorio);
+        RelatorioEntity relatorioExistente = optionalRelatorio.get();
+        validarRelatorio(relatorioAtualizado);
+
+        // Atualiza os campos permitidos. Não permitimos a troca do chat associado.
+        relatorioExistente.setAcuracia(relatorioAtualizado.getAcuracia());
+        relatorioExistente.setAnalisefono(relatorioAtualizado.getAnalisefono());
+
+        return relatorioRepository.save(relatorioExistente);
     }
 
-    // Deletar relatório
+    /**
+     * Deleta um relatório.
+     */
     public void deletar(Long id) {
-        repository.deleteById(id);
+        if (!relatorioRepository.existsById(id)) {
+            throw new EntityNotFoundException("Relatório não encontrado com o ID: " + id);
+        }
+        relatorioRepository.deleteById(id);
+    }
+
+    /**
+     * Valida os campos do objeto Relatorio.
+     */
+    private void validarRelatorio(RelatorioEntity relatorio) {
+        if (relatorio == null) {
+            throw new IllegalArgumentException("O objeto de relatório não pode ser nulo.");
+        }
+        if (relatorio.getChat() == null || relatorio.getChat().getId() == null) {
+            throw new IllegalArgumentException("O relatório deve estar associado a um chat.");
+        }
+        if (relatorio.getAnalisefono() == null || relatorio.getAnalisefono().isBlank()) {
+            throw new IllegalArgumentException("A análise do fonoaudiólogo é obrigatória.");
+        }
+        if (relatorio.getAcuracia() == null || relatorio.getAcuracia() < 0.0 || relatorio.getAcuracia() > 1.0) {
+            throw new IllegalArgumentException("A acurácia deve ser um valor entre 0.0 e 1.0.");
+        }
     }
 }

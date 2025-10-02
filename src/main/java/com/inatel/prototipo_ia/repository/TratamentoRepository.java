@@ -32,4 +32,7 @@ public interface TratamentoRepository extends JpaRepository<TratamentoEntity, Lo
     
     // Buscar tratamentos por tipo (ignorando case)
     List<TratamentoEntity> findByTipoTratamentoIgnoreCase(String tipoTratamento);
+
+    // Verifica se existe um tratamento associado a um ID de profissional.
+    boolean existsByProfissionalId(Long profissionalId);
 }

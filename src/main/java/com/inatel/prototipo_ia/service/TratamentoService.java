@@ -1,82 +1,108 @@
 package com.inatel.prototipo_ia.service;
 
 import com.inatel.prototipo_ia.entity.TratamentoEntity;
-import com.inatel.prototipo_ia.entity.ProfissionalEntity;
+import com.inatel.prototipo_ia.repository.ProfissionalRepository;
 import com.inatel.prototipo_ia.repository.TratamentoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class TratamentoService {
 
-    private final TratamentoRepository repository;
+    private final TratamentoRepository tratamentoRepository;
+    private final ProfissionalRepository profissionalRepository;
 
-    public TratamentoService(TratamentoRepository repository) {
-        this.repository = repository;
+    public TratamentoService(TratamentoRepository tratamentoRepository, ProfissionalRepository profissionalRepository) {
+        this.tratamentoRepository = tratamentoRepository;
+        this.profissionalRepository = profissionalRepository;
     }
 
-    
-
-    // Criar tratamento
+    /**
+     * Cria um novo tratamento, associando um profissional.
+     */
     public TratamentoEntity criar(TratamentoEntity tratamento) {
-        return repository.save(tratamento);
+        validarTratamento(tratamento);
+
+        Long profissionalId = tratamento.getProfissional().getId();
+
+        // Verificando o profissional
+        if (!profissionalRepository.existsById(profissionalId)) {
+            throw new EntityNotFoundException("Não é possível criar o tratamento pois o profissional com ID " + profissionalId + " não foi encontrado.");
+        }
+
+        return tratamentoRepository.save(tratamento);
     }
 
-    // Buscar todos os tratamentos
+    /**
+     * Busca todos os tratamentos.
+     */
     public List<TratamentoEntity> buscarTodos() {
-        return repository.findAll();
+        return tratamentoRepository.findAll();
     }
 
-    // Buscar tratamento por ID
+    /**
+     * Busca um tratamento pelo seu ID.
+     */
     public Optional<TratamentoEntity> buscarPorId(Long id) {
-        return repository.findById(id);
+        return tratamentoRepository.findById(id);
     }
-
-    // Buscar tratamentos por profissional
-    public List<TratamentoEntity> buscarPorProfissional(ProfissionalEntity profissional) {
-        return repository.findByProfissional(profissional);
-    }
-
-    // Buscar tratamentos por ID do profissional
+    
+    /**
+     * Busca todos os tratamentos de um profissional específico.
+     */
     public List<TratamentoEntity> buscarPorProfissionalId(Long profissionalId) {
-        return repository.findByProfissionalId(profissionalId);
+        return tratamentoRepository.findByProfissionalId(profissionalId);
     }
 
-    // Buscar tratamentos por tipo
-    public List<TratamentoEntity> buscarPorTipo(String tipoTratamento) {
-        return repository.findByTipoTratamento(tipoTratamento);
+    /**
+     * Atualiza os dados de um tratamento existente.
+     */
+    public TratamentoEntity atualizar(Long id, TratamentoEntity tratamentoAtualizado) {
+        Optional<TratamentoEntity> optionalTratamento = tratamentoRepository.findById(id);
+        if (optionalTratamento.isEmpty()) {
+            throw new EntityNotFoundException("Tratamento não encontrado com o ID: " + id);
+        }
+
+        TratamentoEntity tratamentoExistente = optionalTratamento.get();
+        validarTratamento(tratamentoAtualizado);
+        
+        tratamentoExistente.setTipotratamento(tratamentoAtualizado.getTipotratamento());
+        tratamentoExistente.setQuantidadedia(tratamentoAtualizado.getQuantidadedia());
+
+        return tratamentoRepository.save(tratamentoExistente);
     }
 
-    // Buscar tratamentos intensivos (mais de 3 por dia)
-    public List<TratamentoEntity> buscarIntensivos() {
-        return repository.findTratamentosIntensivos();
-    }
-
-    // Buscar tratamentos com quantidade por dia maior que X
-    public List<TratamentoEntity> buscarComQuantidadeMaiorQue(Integer quantidade) {
-        return repository.findByQuantidadeDiaGreaterThan(quantidade);
-    }
-
-    // Buscar tratamentos por tipo e quantidade mínima
-    public List<TratamentoEntity> buscarPorTipoEQuantidadeMinima(String tipo, Integer quantidade) {
-        return repository.findByTipoTratamentoAndQuantidadeDiaGreaterThanEqual(tipo, quantidade);
-    }
-
-    // Buscar tratamentos por tipo (ignorando case)
-    public List<TratamentoEntity> buscarPorTipoIgnoreCase(String tipoTratamento) {
-        return repository.findByTipoTratamentoIgnoreCase(tipoTratamento);
-    }
-
-    // Atualizar tratamento
-    public TratamentoEntity atualizar(TratamentoEntity tratamento) {
-        return repository.save(tratamento);
-    }
-
-    // Deletar tratamento
+    /**
+     * Deleta um tratamento.
+     */
     public void deletar(Long id) {
-        repository.deleteById(id);
+        if (!tratamentoRepository.existsById(id)) {
+            throw new EntityNotFoundException("Tratamento não encontrado com o ID: " + id);
+        }
+        
+        tratamentoRepository.deleteById(id);
+    }
+
+    /**
+     * Valida os campos do objeto Tratamento.
+     */
+    private void validarTratamento(TratamentoEntity tratamento) {
+        if (tratamento == null) {
+            throw new IllegalArgumentException("O objeto de tratamento não pode ser nulo.");
+        }
+        if (tratamento.getProfissional() == null || tratamento.getProfissional().getId() == null) {
+            throw new IllegalArgumentException("O tratamento deve estar associado a um profissional.");
+        }
+        if (tratamento.getTipotratamento() == null || tratamento.getTipotratamento().isBlank()) {
+            throw new IllegalArgumentException("O tipo de tratamento é obrigatório.");
+        }
+        if (tratamento.getQuantidadedia() == null || tratamento.getQuantidadedia() <= 0) {
+            throw new IllegalArgumentException("A quantidade de dias deve ser um número positivo.");
+        }
     }
 }

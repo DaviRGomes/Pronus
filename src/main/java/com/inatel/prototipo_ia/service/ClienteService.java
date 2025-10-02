@@ -1,59 +1,101 @@
 package com.inatel.prototipo_ia.service;
 
 import com.inatel.prototipo_ia.entity.ClienteEntity;
+import com.inatel.prototipo_ia.repository.ChatRepository;
 import com.inatel.prototipo_ia.repository.ClienteRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Transactional
 public class ClienteService {
 
-    private final ClienteRepository repository;
+    private final ClienteRepository clienteRepository;
+    private final ChatRepository chatRepository;
 
-    public ClienteService(ClienteRepository repository) {
-        this.repository = repository;
+    public ClienteService(ClienteRepository clienteRepository, ChatRepository chatRepository) {
+        this.clienteRepository = clienteRepository;
+        this.chatRepository = chatRepository;
     }
 
-    // Criar cliente
+    /**
+     * Cria um novo cliente (e o usuário base correspondente).
+     */
     public ClienteEntity criar(ClienteEntity cliente) {
-        return repository.save(cliente);
+        validarCliente(cliente);
+
+        if (cliente.getId() != null && clienteRepository.existsById(cliente.getId())) {
+            throw new IllegalStateException("Já existe um cliente com o ID: " + cliente.getId());
+        }
+        
+        return clienteRepository.save(cliente);
     }
 
-    // Buscar todos os clientes
+    /**
+     * Busca todos os clientes.
+     */
     public List<ClienteEntity> buscarTodos() {
-        return repository.findAll();
+        return clienteRepository.findAll();
     }
 
-    // Buscar cliente por ID
+    /**
+     * Busca um cliente pelo seu ID (que é o mesmo ID do usuário).
+     */
     public Optional<ClienteEntity> buscarPorId(Long id) {
-        return repository.findById(id);
+        return clienteRepository.findById(id);
     }
 
-    // Buscar clientes maiores de 18 anos
-    public List<ClienteEntity> buscarMaioresDeIdade() {
-        return repository.findClientesMaioresDeIdade();
+    /**
+     * Atualiza os dados de um cliente/usuário.
+     */
+    public ClienteEntity atualizar(Long id, ClienteEntity clienteAtualizado) {
+
+        Optional<ClienteEntity> optionalCliente = clienteRepository.findById(id);
+        if (optionalCliente.isEmpty()) {
+            throw new EntityNotFoundException("Cliente não encontrado com o ID: " + id);
+        }
+
+        ClienteEntity clienteExistente = optionalCliente.get();
+        
+        validarCliente(clienteAtualizado);
+
+        clienteExistente.setNome(clienteAtualizado.getNome());
+        clienteExistente.setIdade(clienteAtualizado.getIdade());
+        clienteExistente.setEndereco(clienteAtualizado.getEndereco());
+        clienteExistente.setNivel(clienteAtualizado.getNivel());
+
+        return clienteRepository.save(clienteExistente);
     }
 
-    // Buscar clientes por nível
-    public List<ClienteEntity> buscarPorNivel(String nivel) {
-        return repository.findByNivel(nivel);
-    }
-
-    // Buscar clientes por nível e idade mínima
-    public List<ClienteEntity> buscarPorNivelEIdadeMinima(String nivel, Integer idade) {
-        return repository.findByNivelAndIdadeMinima(nivel, idade);
-    }
-
-    // Atualizar cliente
-    public ClienteEntity atualizar(ClienteEntity cliente) {
-        return repository.save(cliente);
-    }
-
-    // Deletar cliente
+    /**
+     * Deleta um cliente, se ele não estiver participando de nenhum chat.
+     */
     public void deletar(Long id) {
-        repository.deleteById(id);
+        if (!clienteRepository.existsById(id)) {
+            throw new EntityNotFoundException("Cliente não encontrado com o ID: " + id);
+        }
+
+        if (chatRepository.existsByClienteId(id)) {
+            throw new IllegalStateException("Não é possível deletar o cliente pois ele está associado a um ou mais chats.");
+        }
+
+        clienteRepository.deleteById(id);
+    }
+
+    /**
+     * Valida os campos obrigatórios e herdados do usuário.
+     */
+    private void validarCliente(ClienteEntity cliente) {
+        if (cliente == null) {
+            throw new IllegalArgumentException("O objeto de cliente não pode ser nulo.");
+        }
+
+        if (cliente.getNome() == null || cliente.getNome().isBlank()) {
+            throw new IllegalArgumentException("O nome do cliente/usuário é obrigatório.");
+        }
     }
 }

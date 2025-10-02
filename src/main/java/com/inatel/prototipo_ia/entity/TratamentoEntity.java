@@ -14,9 +14,9 @@ public class TratamentoEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Integer quantidadeDia;
+    private Integer quantidadedia;
 
-    private String tipoTratamento;
+    private String tipotratamento;
 
     // Muitos tratamentos para um profissional
     @ManyToOne

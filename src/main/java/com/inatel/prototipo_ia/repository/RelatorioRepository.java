@@ -17,4 +17,7 @@ public interface RelatorioRepository extends JpaRepository<RelatorioEntity, Long
     
     // Buscar relatório por ID do chat
     Optional<RelatorioEntity> findByChatId(Long chatId);
+
+    // Verifica s existe um relatório para um chat.
+    boolean existsByChatId(Long chatId);
 }

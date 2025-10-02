@@ -13,4 +13,7 @@ public interface UsuarioRepository extends JpaRepository<UsuarioEntity, Long> {
 
     // Buscar usuários por idade exata
     List<UsuarioEntity> findByIdade(Integer idade);
+
+    // Buscar nome independente se está maiúsculo ou minúscolo
+    List<UsuarioEntity> findByNomeContainingIgnoreCase(String nome);
 }
