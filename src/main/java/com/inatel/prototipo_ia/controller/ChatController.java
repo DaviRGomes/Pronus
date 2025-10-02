@@ -66,12 +66,12 @@ public class ChatController {
         return ResponseEntity.ok(chats);
     }
 
-    // Buscar chats por palavra na conversa
-    @GetMapping("/conversa/{palavra}")
-    public ResponseEntity<List<ChatEntity>> buscarPorPalavraConversa(@PathVariable String palavra) {
-        List<ChatEntity> chats = service.buscarPorPalavraConversa(palavra);
-        return ResponseEntity.ok(chats);
-    }
+    // // Buscar chats por palavra na conversa
+    // @GetMapping("/conversa/{palavra}")
+    // public ResponseEntity<List<ChatEntity>> buscarPorPalavraConversa(@PathVariable String palavra) {
+    //     List<ChatEntity> chats = service.buscarPorPalavraConversa(palavra);
+    //     return ResponseEntity.ok(chats);
+    // }
 
     // Atualizar chat
     @PutMapping("/{id}")

@@ -38,40 +38,11 @@ public class UsuarioController {
                      .orElse(ResponseEntity.notFound().build());
     }
 
-    // Buscar usuários maiores de 18 anos
-    @GetMapping("/maiores-idade")
-    public ResponseEntity<List<UsuarioEntity>> buscarMaioresDeIdade() {
-        List<UsuarioEntity> usuarios = service.buscarMaioresDeIdade();
-        return ResponseEntity.ok(usuarios);
-    }
-
-    // Buscar usuários por nome
-    @GetMapping("/nome/{nome}")
-    public ResponseEntity<List<UsuarioEntity>> buscarPorNome(@PathVariable String nome) {
-        List<UsuarioEntity> usuarios = service.buscarPorNome(nome);
-        return ResponseEntity.ok(usuarios);
-    }
 
     // Buscar usuários por idade
     @GetMapping("/idade/{idade}")
     public ResponseEntity<List<UsuarioEntity>> buscarPorIdade(@PathVariable Integer idade) {
         List<UsuarioEntity> usuarios = service.buscarPorIdade(idade);
-        return ResponseEntity.ok(usuarios);
-    }
-
-    // Buscar usuários por endereço
-    @GetMapping("/endereco/{endereco}")
-    public ResponseEntity<List<UsuarioEntity>> buscarPorEndereco(@PathVariable String endereco) {
-        List<UsuarioEntity> usuarios = service.buscarPorEndereco(endereco);
-        return ResponseEntity.ok(usuarios);
-    }
-
-    // Buscar usuários entre idades
-    @GetMapping("/idade-entre/{idadeMin}/{idadeMax}")
-    public ResponseEntity<List<UsuarioEntity>> buscarEntreIdades(
-            @PathVariable Integer idadeMin, 
-            @PathVariable Integer idadeMax) {
-        List<UsuarioEntity> usuarios = service.buscarEntreIdades(idadeMin, idadeMax);
         return ResponseEntity.ok(usuarios);
     }
 
@@ -89,4 +60,10 @@ public class UsuarioController {
         service.deletar(id);
         return ResponseEntity.noContent().build();
     }
+    // Removidos os endpoints:
+    // - /maiores-idade
+    // - /nome/{nome}
+    // - /endereco/{endereco}
+    // - /idade-entre/{idadeMin}/{idadeMax}
+    // Mantidos os que já existem na Service:
 }

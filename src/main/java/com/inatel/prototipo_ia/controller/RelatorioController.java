@@ -46,36 +46,6 @@ public class RelatorioController {
                        .orElse(ResponseEntity.notFound().build());
     }
 
-    // Buscar relatórios com alta acurácia (maior que 0.8)
-    @GetMapping("/alta-acuracia")
-    public ResponseEntity<List<RelatorioEntity>> buscarAltaAcuracia() {
-        List<RelatorioEntity> relatorios = service.buscarAltaAcuracia();
-        return ResponseEntity.ok(relatorios);
-    }
-
-    // Buscar relatórios com acurácia maior que X
-    @GetMapping("/acuracia-maior/{acuracia}")
-    public ResponseEntity<List<RelatorioEntity>> buscarComAcuraciaMaiorQue(@PathVariable Float acuracia) {
-        List<RelatorioEntity> relatorios = service.buscarComAcuraciaMaiorQue(acuracia);
-        return ResponseEntity.ok(relatorios);
-    }
-
-    // Buscar relatórios por análise fonoaudiológica
-    @GetMapping("/analise/{analise}")
-    public ResponseEntity<List<RelatorioEntity>> buscarPorAnalise(@PathVariable String analise) {
-        List<RelatorioEntity> relatorios = service.buscarPorAnalise(analise);
-        return ResponseEntity.ok(relatorios);
-    }
-
-    // Buscar relatórios por faixa de acurácia
-    @GetMapping("/acuracia-entre/{acuraciaMin}/{acuraciaMax}")
-    public ResponseEntity<List<RelatorioEntity>> buscarPorFaixaAcuracia(
-            @PathVariable Float acuraciaMin, 
-            @PathVariable Float acuraciaMax) {
-        List<RelatorioEntity> relatorios = service.buscarPorFaixaAcuracia(acuraciaMin, acuraciaMax);
-        return ResponseEntity.ok(relatorios);
-    }
-
     // Atualizar relatório
     @PutMapping("/{id}")
     public ResponseEntity<RelatorioEntity> atualizar(@PathVariable Long id, @RequestBody RelatorioEntity relatorio) {
