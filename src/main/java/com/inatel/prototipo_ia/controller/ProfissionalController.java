@@ -52,12 +52,12 @@ public class ProfissionalController {
         return ResponseEntity.ok(profissionais);
     }
 
-    // Buscar profissionais por certificado
-    @GetMapping("/certificado/{certificado}")
-    public ResponseEntity<List<ProfissionalEntity>> buscarPorCertificado(@PathVariable String certificado) {
-        List<ProfissionalEntity> profissionais = service.buscarPorCertificado(certificado);
-        return ResponseEntity.ok(profissionais);
-    }
+    // // Buscar profissionais por certificado
+    // @GetMapping("/certificado/{certificado}")
+    // public ResponseEntity<List<ProfissionalEntity>> buscarPorCertificado(@PathVariable String certificado) {
+    //     List<ProfissionalEntity> profissionais = service.buscarPorCertificado(certificado);
+    //     return ResponseEntity.ok(profissionais);
+    // }
 
 
 
