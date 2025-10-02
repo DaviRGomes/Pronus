@@ -98,4 +98,32 @@ public class ClienteService {
             throw new IllegalArgumentException("O nome do cliente/usuário é obrigatório.");
         }
     }
+
+    public ClienteEntity atualizar(ClienteEntity clienteAtualizado) {
+        if (clienteAtualizado == null || clienteAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O cliente para atualização deve ter um ID.");
+        }
+        return atualizar(clienteAtualizado.getId(), clienteAtualizado);
+    }
+
+    public List<ClienteEntity> buscarMaioresDeIdade() {
+        return clienteRepository.findClientesMaioresDeIdade();
+    }
+
+    public List<ClienteEntity> buscarPorNivel(String nivel) {
+        if (nivel == null || nivel.isBlank()) {
+            throw new IllegalArgumentException("O nível não pode ser vazio.");
+        }
+        return clienteRepository.findByNivel(nivel);
+    }
+
+    public List<ClienteEntity> buscarPorNivelEIdadeMinima(String nivel, Integer idade) {
+        if (nivel == null || nivel.isBlank()) {
+            throw new IllegalArgumentException("O nível não pode ser vazio.");
+        }
+        if (idade == null || idade < 0) {
+            throw new IllegalArgumentException("A idade mínima deve ser não negativa.");
+        }
+        return clienteRepository.findByNivelAndIdadeMinima(nivel, idade);
+    }
 }

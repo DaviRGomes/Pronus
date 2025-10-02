@@ -57,8 +57,14 @@ public class UsuarioService {
     /**
      * Atualiza um usuário existente.
      */
-    public UsuarioEntity atualizar(Long id, UsuarioEntity usuarioAtualizado) {
+    public UsuarioEntity atualizar(UsuarioEntity usuarioAtualizado) {
+        if (usuarioAtualizado == null || usuarioAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O usuário para atualização deve ter um ID.");
+        }
+        return atualizar(usuarioAtualizado.getId(), usuarioAtualizado);
+    }
 
+    public UsuarioEntity atualizar(Long id, UsuarioEntity usuarioAtualizado) {
         Optional<UsuarioEntity> optionalUsuario = usuarioRepository.findById(id);
 
         if (optionalUsuario.isEmpty()) {
@@ -92,6 +98,13 @@ public class UsuarioService {
         }
 
         usuarioRepository.deleteById(id);
+    }
+
+    public List<UsuarioEntity> buscarPorIdade(Integer idade) {
+        if (idade == null || idade < 0) {
+            throw new IllegalArgumentException("A idade deve ser não negativa.");
+        }
+        return usuarioRepository.findByIdade(idade);
     }
 
     private void validarUsuario(UsuarioEntity usuario) {

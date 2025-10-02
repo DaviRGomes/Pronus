@@ -73,6 +73,13 @@ public class ChatService {
         return chatRepository.save(chatExistente);
     }
 
+    public ChatEntity atualizar(ChatEntity chatAtualizado) {
+        if (chatAtualizado == null || chatAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O chat para atualização deve ter um ID.");
+        }
+        return atualizar(chatAtualizado.getId(), chatAtualizado);
+    }
+
     /**
      * Deleta um chat pelo seu ID.
      */
@@ -121,6 +128,10 @@ public class ChatService {
             throw new IllegalArgumentException("A duração em minutos deve ser um número positivo.");
         }
         return chatRepository.findByDuracaoGreaterThan(minutos);
+    }
+
+    public List<ChatEntity> buscarChatsLongos() {
+        return chatRepository.findChatsLongos();
     }
 
     private void validarDadosDoChat(ChatEntity chat) {

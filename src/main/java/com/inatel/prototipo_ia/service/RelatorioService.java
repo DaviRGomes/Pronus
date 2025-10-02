@@ -107,4 +107,12 @@ public class RelatorioService {
             throw new IllegalArgumentException("A acurácia deve ser um valor entre 0.0 e 1.0.");
         }
     }
+
+    // Sobrecarga: atualizar aceitando só a entidade (compatível com RelatorioController)
+    public RelatorioEntity atualizar(RelatorioEntity relatorioAtualizado) {
+        if (relatorioAtualizado == null || relatorioAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O relatório para atualização deve ter um ID.");
+        }
+        return atualizar(relatorioAtualizado.getId(), relatorioAtualizado);
+    }
 }

@@ -52,19 +52,19 @@ public class TratamentoController {
         return ResponseEntity.ok(tratamentos);
     }
 
-    // Buscar tratamentos intensivos (mais de 3 por dia)
-    @GetMapping("/intensivos")
-    public ResponseEntity<List<TratamentoEntity>> buscarIntensivos() {
-        List<TratamentoEntity> tratamentos = service.buscarIntensivos();
-        return ResponseEntity.ok(tratamentos);
-    }
+    // // Buscar tratamentos intensivos (mais de 3 por dia)
+    // @GetMapping("/intensivos")
+    // public ResponseEntity<List<TratamentoEntity>> buscarIntensivos() {
+    //     List<TratamentoEntity> tratamentos = service.buscarIntensivos();
+    //     return ResponseEntity.ok(tratamentos);
+    // }
 
-    // Buscar tratamentos com quantidade por dia maior que X
-    @GetMapping("/quantidade-maior/{quantidade}")
-    public ResponseEntity<List<TratamentoEntity>> buscarComQuantidadeMaiorQue(@PathVariable Integer quantidade) {
-        List<TratamentoEntity> tratamentos = service.buscarComQuantidadeMaiorQue(quantidade);
-        return ResponseEntity.ok(tratamentos);
-    }
+    // // Buscar tratamentos com quantidade por dia maior que X
+    // @GetMapping("/quantidade-maior/{quantidade}")
+    // public ResponseEntity<List<TratamentoEntity>> buscarComQuantidadeMaiorQue(@PathVariable Integer quantidade) {
+    //     List<TratamentoEntity> tratamentos = service.buscarComQuantidadeMaiorQue(quantidade);
+    //     return ResponseEntity.ok(tratamentos);
+    // }
 
     // Buscar tratamentos por tipo e quantidade mínima
     @GetMapping("/tipo/{tipo}/quantidade-minima/{quantidade}")

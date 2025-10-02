@@ -105,4 +105,31 @@ public class TratamentoService {
             throw new IllegalArgumentException("A quantidade de dias deve ser um número positivo.");
         }
     }
+
+    // Tratamentos por tipo (ignorando maiúsculas/minúsculas)
+    public List<TratamentoEntity> buscarPorTipo(String tipoTratamento) {
+        if (tipoTratamento == null || tipoTratamento.isBlank()) {
+            throw new IllegalArgumentException("O tipo de tratamento não pode ser vazio.");
+        }
+        return tratamentoRepository.findByTipoTratamentoIgnoreCase(tipoTratamento);
+    }
+
+    // Tratamentos por tipo e quantidade mínima
+    public List<TratamentoEntity> buscarPorTipoEQuantidadeMinima(String tipo, Integer quantidade) {
+        if (tipo == null || tipo.isBlank()) {
+            throw new IllegalArgumentException("O tipo de tratamento não pode ser vazio.");
+        }
+        if (quantidade == null || quantidade < 0) {
+            throw new IllegalArgumentException("A quantidade mínima deve ser não negativa.");
+        }
+        return tratamentoRepository.findByTipoTratamentoAndQuantidadeDiaGreaterThanEqual(tipo, quantidade);
+    }
+
+    // Sobrecarga: atualizar aceitando só a entidade (compatível com o controller)
+    public TratamentoEntity atualizar(TratamentoEntity tratamentoAtualizado) {
+        if (tratamentoAtualizado == null || tratamentoAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O tratamento para atualização deve ter um ID.");
+        }
+        return atualizar(tratamentoAtualizado.getId(), tratamentoAtualizado);
+    }
 }

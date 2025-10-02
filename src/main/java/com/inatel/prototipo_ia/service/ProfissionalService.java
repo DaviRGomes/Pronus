@@ -105,4 +105,36 @@ public class ProfissionalService {
             throw new IllegalArgumentException("Os certificados são obrigatórios.");
         }
     }
+
+    // Sobrecarga: atualizar aceitando só a entidade (compatível com o controller)
+    public ProfissionalEntity atualizar(ProfissionalEntity profissionalAtualizado) {
+        if (profissionalAtualizado == null || profissionalAtualizado.getId() == null) {
+            throw new IllegalArgumentException("O profissional para atualização deve ter um ID.");
+        }
+        return atualizar(profissionalAtualizado.getId(), profissionalAtualizado);
+    }
+
+    // Profissionais experientes (>= 5 anos)
+    public List<ProfissionalEntity> buscarExperientes() {
+        return profissionalRepository.findProfissionaisExperientes();
+    }
+
+    // Profissionais com experiência maior que X anos
+    public List<ProfissionalEntity> buscarComExperienciaMaiorQue(Integer anos) {
+        if (anos == null || anos < 0) {
+            throw new IllegalArgumentException("Os anos de experiência devem ser não negativos.");
+        }
+        return profissionalRepository.findByExperienciaGreaterThan(anos);
+    }
+
+    // Profissionais qualificados por experiência mínima e idade mínima
+    public List<ProfissionalEntity> buscarQualificados(Integer experienciaMinima, Integer idadeMinima) {
+        if (experienciaMinima == null || experienciaMinima < 0) {
+            throw new IllegalArgumentException("A experiência mínima deve ser não negativa.");
+        }
+        if (idadeMinima == null || idadeMinima < 0) {
+            throw new IllegalArgumentException("A idade mínima deve ser não negativa.");
+        }
+        return profissionalRepository.findByExperienciaAndIdadeMinima(experienciaMinima, idadeMinima);
+    }
 }
