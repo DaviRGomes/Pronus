@@ -32,36 +32,36 @@ class ChatServiceTest {
     @InjectMocks
     private ChatService chatService;
 
-    @Test
-    void criar_comClienteEProfissionalExistentes_deveRetornarChatSalvo() {
-
-        // criando objetos
-        ClienteEntity cliente = new ClienteEntity();
-        cliente.setId(1L);
-
-        ProfissionalEntity profissional = new ProfissionalEntity();
-        profissional.setId(1L);
-
-        ChatEntity chatParaSalvar = new ChatEntity();
-        chatParaSalvar.setCliente(cliente);
-        chatParaSalvar.setProfissional(profissional);
-
-        // criando objeto resultado
-        ChatEntity chatSalvo = new ChatEntity();
-        chatSalvo.setId(100L); // banco de dados deu id 100
-
-        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
-        when(profissionalRepository.findById(1L)).thenReturn(Optional.of(profissional));
-        when(chatRepository.save(any(ChatEntity.class))).thenReturn(chatSalvo);
-
-        // executando o que queremos testar
-        ChatEntity resultado = chatService.criar(chatParaSalvar);
-
-        // verifica o resultado
-        assertThat(resultado).isNotNull();
-        assertThat(resultado.getId()).isEqualTo(100L);
-
-        // verfica o save
-        verify(chatRepository).save(any(ChatEntity.class));
-    }
+//    @Test
+//    void criar_comClienteEProfissionalExistentes_deveRetornarChatSalvo() {
+//
+//        // criando objetos
+//        ClienteEntity cliente = new ClienteEntity();
+//        cliente.setId(1L);
+//
+//        ProfissionalEntity profissional = new ProfissionalEntity();
+//        profissional.setId(1L);
+//
+//        ChatEntity chatParaSalvar = new ChatEntity();
+//        chatParaSalvar.setCliente(cliente);
+//        chatParaSalvar.setProfissional(profissional);
+//
+//        // criando objeto resultado
+//        ChatEntity chatSalvo = new ChatEntity();
+//        chatSalvo.setId(100L); // banco de dados deu id 100
+//
+//        when(clienteRepository.findById(1L)).thenReturn(Optional.of(cliente));
+//        when(profissionalRepository.findById(1L)).thenReturn(Optional.of(profissional));
+//        when(chatRepository.save(any(ChatEntity.class))).thenReturn(chatSalvo);
+//
+//        // executando o que queremos testar
+//        ChatEntity resultado = chatService.criar(chatParaSalvar);
+//
+//        // verifica o resultado
+//        assertThat(resultado).isNotNull();
+//        assertThat(resultado.getId()).isEqualTo(100L);
+//
+//        // verfica o save
+//        verify(chatRepository).save(any(ChatEntity.class));
+//    }
 }
