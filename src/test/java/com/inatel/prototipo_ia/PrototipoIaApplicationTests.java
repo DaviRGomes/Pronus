@@ -1,10 +1,15 @@
 package com.inatel.prototipo_ia;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class PrototipoIaApplicationTests {
+@SpringBootTest(classes = com.inatel.prototipo_ia.PrototipoIaApplication.class,
+    properties = {
+        "spring.jpa.hibernate.ddl-auto=none"
+    })
+public class PrototipoIaApplicationTests {
 
 	@Test
 	void contextLoads() {
