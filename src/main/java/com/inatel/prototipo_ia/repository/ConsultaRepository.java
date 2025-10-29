@@ -10,6 +10,16 @@ import java.util.List;
 
 public interface ConsultaRepository extends JpaRepository<ConsultaEntity, Long> {
     List<ConsultaEntity> findByCliente(ClienteEntity cliente);
+
     List<ConsultaEntity> findByEspecialista(EspecialistaEntity especialista);
+
     List<ConsultaEntity> findByData(LocalDate data);
+
+    List<ConsultaEntity> findByClienteId(Long clienteId);
+
+    List<ConsultaEntity> findByEspecialistaId(Long especialistaId);
+
+    List<ConsultaEntity> findByStatus(String status);
+
+    boolean existsByEspecialistaId(Long especialistaId);
 }
