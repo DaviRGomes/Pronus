@@ -311,7 +311,7 @@ class UsuarioServiceTest {
             when(clienteRepository.existsById(5L)).thenReturn(false);
             when(profissionalRepository.existsById(5L)).thenReturn(true);
 
-x            assertThatThrownBy(() -> usuarioService.deletar(5L))
+            assertThatThrownBy(() -> usuarioService.deletar(5L))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("profissional");
 
