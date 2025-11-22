@@ -6,6 +6,7 @@ import com.inatel.prototipo_ia.entity.ClienteEntity;
 import com.inatel.prototipo_ia.repository.ChatRepository;
 import com.inatel.prototipo_ia.repository.ClienteRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder; // IMPORTANTE
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,10 +20,15 @@ public class ClienteService {
 
     private final ClienteRepository clienteRepository;
     private final ChatRepository chatRepository;
+    private final PasswordEncoder passwordEncoder; // IMPORTANTE
 
-    public ClienteService(ClienteRepository clienteRepository, ChatRepository chatRepository) {
+    // Construtor atualizado para injetar o PasswordEncoder
+    public ClienteService(ClienteRepository clienteRepository, 
+                          ChatRepository chatRepository, 
+                          PasswordEncoder passwordEncoder) {
         this.clienteRepository = clienteRepository;
         this.chatRepository = chatRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -34,91 +40,65 @@ public class ClienteService {
         ClienteEntity novo = new ClienteEntity();
         aplicarDtoNoEntity(novo, clienteCreate);
 
+        // --- CORREÇÃO DO ERRO 500 AQUI ---
+        // Agora pegamos o login e senha do DTO e salvamos na Entidade
+        novo.setLogin(clienteCreate.getLogin());
+        
+        // Criptografamos a senha antes de salvar
+        if (clienteCreate.getSenha() != null) {
+            novo.setSenha(passwordEncoder.encode(clienteCreate.getSenha()));
+        }
+        // --------------------------------
+
         ClienteEntity salvo = clienteRepository.save(novo);
         return toDto(salvo);
     }
 
-    /**
-     * Busca todos os clientes e retorna lista de DTOs de saída.
-     */
     public List<ClienteDtoOut> buscarTodos() {
-        return clienteRepository.findAll()
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return clienteRepository.findAll().stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    /**
-     * Busca um cliente pelo seu ID e retorna DTO de saída.
-     */
     public Optional<ClienteDtoOut> buscarPorId(Long id) {
         return clienteRepository.findById(id).map(this::toDto);
     }
 
-    /**
-     * Atualiza os dados de um cliente (via DTO In) e retorna DTO Out.
-     */
     public ClienteDtoOut atualizar(Long id, ClienteDtoIn clienteAtualizado) {
         Optional<ClienteEntity> optionalCliente = clienteRepository.findById(id);
         if (optionalCliente.isEmpty()) {
             throw new EntityNotFoundException("Cliente não encontrado com o ID: " + id);
         }
-
         validarClienteDto(clienteAtualizado);
-
         ClienteEntity existente = optionalCliente.get();
         aplicarDtoNoEntity(existente, clienteAtualizado);
-
         ClienteEntity atualizado = clienteRepository.save(existente);
         return toDto(atualizado);
     }
 
-    /**
-     * Deleta um cliente, se ele não estiver participando de nenhum chat.
-     */
     public void deletar(Long id) {
         if (!clienteRepository.existsById(id)) {
             throw new EntityNotFoundException("Cliente não encontrado com o ID: " + id);
         }
-
         if (chatRepository.existsByClienteId(id)) {
             throw new IllegalStateException("Não é possível deletar o cliente pois ele está associado a um ou mais chats.");
         }
-
         clienteRepository.deleteById(id);
     }
 
-    /**
-     * Busca clientes maiores de idade e retorna DTO Out.
-     */
     public List<ClienteDtoOut> buscarMaioresDeIdade() {
-        return clienteRepository.findClientesMaioresDeIdade()
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return clienteRepository.findClientesMaioresDeIdade().stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    /**
-     * Busca clientes por nível e retorna DTO Out.
-     */
     public List<ClienteDtoOut> buscarPorNivel(String nivel) {
         if (nivel == null || nivel.isBlank()) {
             throw new IllegalArgumentException("O nível não pode ser vazio.");
         }
-        return clienteRepository.findByNivel(nivel)
-                .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return clienteRepository.findByNivel(nivel).stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    /**
-     * Conversor de Entidade -> DTO Out.
-     */
     private ClienteDtoOut toDto(ClienteEntity cliente) {
         List<Long> chatIds = (cliente.getChats() != null)
                 ? cliente.getChats().stream().map(c -> c.getId()).collect(Collectors.toList())
                 : null;
-
         ClienteDtoOut dto = new ClienteDtoOut();
         dto.setId(cliente.getId());
         dto.setNome(cliente.getNome());
@@ -129,9 +109,6 @@ public class ClienteService {
         return dto;
     }
 
-    /**
-     * Aplica os campos do DTO In na entidade (create/update).
-     */
     private void aplicarDtoNoEntity(ClienteEntity destino, ClienteDtoIn fonte) {
         destino.setNome(fonte.getNome());
         destino.setIdade(fonte.getIdade());
@@ -139,9 +116,6 @@ public class ClienteService {
         destino.setNivel(fonte.getNivel());
     }
 
-    /**
-     * Validação simples do DTO de entrada.
-     */
     private void validarClienteDto(ClienteDtoIn cliente) {
         if (cliente == null) {
             throw new IllegalArgumentException("O objeto de cliente não pode ser nulo.");

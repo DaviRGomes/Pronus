@@ -5,11 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ClienteDtoIn {
-    private String nome;
-    private Integer idade;
-    private String endereco;
-    private String nivel;
+public class LoginDtoIn {
     private String login;
     private String senha;
 }

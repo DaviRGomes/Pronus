@@ -7,6 +7,7 @@ import com.inatel.prototipo_ia.repository.ConsultaRepository;
 import com.inatel.prototipo_ia.repository.DisponibilidadeRepository;
 import com.inatel.prototipo_ia.repository.EspecialistaRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,31 +22,36 @@ public class EspecialistaService {
     private final EspecialistaRepository especialistaRepository;
     private final ConsultaRepository consultaRepository;
     private final DisponibilidadeRepository disponibilidadeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public EspecialistaService(EspecialistaRepository especialistaRepository,
                                ConsultaRepository consultaRepository,
-                               DisponibilidadeRepository disponibilidadeRepository) {
+                               DisponibilidadeRepository disponibilidadeRepository,
+                               PasswordEncoder passwordEncoder) {
         this.especialistaRepository = especialistaRepository;
         this.consultaRepository = consultaRepository;
         this.disponibilidadeRepository = disponibilidadeRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Cria um novo especialista a partir de DTO In e retorna DTO Out.
-     */
     public EspecialistaDtoOut criar(EspecialistaDtoIn especialistaDto) {
         validarEspecialistaDto(especialistaDto);
 
         EspecialistaEntity entity = new EspecialistaEntity();
         aplicarDtoNoEntity(entity, especialistaDto);
 
+        if (especialistaDto.getLogin() != null && !especialistaDto.getLogin().isBlank()) {
+            entity.setLogin(especialistaDto.getLogin());
+        }
+        
+        if (especialistaDto.getSenha() != null && !especialistaDto.getSenha().isBlank()) {
+            entity.setSenha(passwordEncoder.encode(especialistaDto.getSenha()));
+        }
+
         EspecialistaEntity salvo = especialistaRepository.save(entity);
         return toDto(salvo);
     }
 
-    /**
-     * Busca todos os especialistas e retorna lista de DTOs de saída.
-     */
     public List<EspecialistaDtoOut> buscarTodos() {
         return especialistaRepository.findAll()
                 .stream()
@@ -53,16 +59,10 @@ public class EspecialistaService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Busca um especialista pelo seu ID e retorna DTO de saída.
-     */
     public Optional<EspecialistaDtoOut> buscarPorId(Long id) {
         return especialistaRepository.findById(id).map(this::toDto);
     }
 
-    /**
-     * Busca especialistas por especialidade.
-     */
     public List<EspecialistaDtoOut> buscarPorEspecialidade(String especialidade) {
         if (especialidade == null || especialidade.isBlank()) {
             throw new IllegalArgumentException("A especialidade não pode ser vazia.");
@@ -73,9 +73,6 @@ public class EspecialistaService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Busca especialistas por CRM/CRFA.
-     */
     public Optional<EspecialistaDtoOut> buscarPorCrmFono(String crmFono) {
         if (crmFono == null || crmFono.isBlank()) {
             throw new IllegalArgumentException("O CRM/CRFA não pode ser vazio.");
@@ -83,9 +80,6 @@ public class EspecialistaService {
         return especialistaRepository.findByCrmFono(crmFono).map(this::toDto);
     }
 
-    /**
-     * Busca especialistas maiores de idade.
-     */
     public List<EspecialistaDtoOut> buscarMaioresDeIdade() {
         return especialistaRepository.findEspecialistasMaioresDeIdade()
                 .stream()
@@ -93,9 +87,6 @@ public class EspecialistaService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Atualiza os dados de um especialista existente via DTO In e retorna DTO Out.
-     */
     public EspecialistaDtoOut atualizar(Long id, EspecialistaDtoIn especialistaDto) {
         Optional<EspecialistaEntity> optionalEspecialista = especialistaRepository.findById(id);
         if (optionalEspecialista.isEmpty()) {
@@ -111,9 +102,6 @@ public class EspecialistaService {
         return toDto(atualizado);
     }
 
-    /**
-     * Deleta um especialista, se ele não estiver associado a consultas ou disponibilidades.
-     */
     public void deletar(Long id) {
         if (!especialistaRepository.existsById(id)) {
             throw new EntityNotFoundException("Especialista não encontrado com o ID: " + id);
@@ -129,9 +117,6 @@ public class EspecialistaService {
         especialistaRepository.deleteById(id);
     }
 
-    /**
-     * Conversor de Entidade -> DTO Out.
-     */
     private EspecialistaDtoOut toDto(EspecialistaEntity entity) {
         EspecialistaDtoOut dto = new EspecialistaDtoOut();
         dto.setId(entity.getId());
@@ -143,9 +128,6 @@ public class EspecialistaService {
         return dto;
     }
 
-    /**
-     * Aplica os campos do DTO In na entidade (create/update).
-     */
     private void aplicarDtoNoEntity(EspecialistaEntity destino, EspecialistaDtoIn fonte) {
         destino.setNome(fonte.getNome());
         destino.setIdade(fonte.getIdade());
@@ -154,9 +136,6 @@ public class EspecialistaService {
         destino.setEspecialidade(fonte.getEspecialidade());
     }
 
-    /**
-     * Validação do DTO de entrada.
-     */
     private void validarEspecialistaDto(EspecialistaDtoIn especialista) {
         if (especialista == null) {
             throw new IllegalArgumentException("O objeto de especialista não pode ser nulo.");

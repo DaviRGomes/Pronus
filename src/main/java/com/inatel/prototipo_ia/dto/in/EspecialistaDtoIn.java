@@ -11,4 +11,6 @@ public class EspecialistaDtoIn {
     private String endereco;
     private String crmFono;
     private String especialidade;
+    private String login;
+    private String senha;
 }
