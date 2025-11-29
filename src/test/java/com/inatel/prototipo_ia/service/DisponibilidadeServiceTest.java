@@ -181,6 +181,8 @@ class DisponibilidadeServiceTest {
             verify(disponibilidadeRepository, never()).save(any());
         }
     }
+    //teste
+
 
     @Nested
     @DisplayName("Testes de Busca de Disponibilidades")
