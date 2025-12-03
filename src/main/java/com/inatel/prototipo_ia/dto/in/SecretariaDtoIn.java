@@ -10,4 +10,6 @@ public class SecretariaDtoIn {
     private Integer idade;
     private String endereco;
     private String email;
+    private String login;
+    private String senha;
 }

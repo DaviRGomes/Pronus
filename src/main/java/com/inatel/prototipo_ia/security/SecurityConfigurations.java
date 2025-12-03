@@ -1,6 +1,12 @@
 package com.inatel.prototipo_ia.security;
 
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -22,10 +28,23 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@OpenAPIDefinition(
+    info = @Info(title = "API Prototipo IA", version = "1.0", description = "API para o protótipo de IA de fonoaudiologia."),
+    security = @SecurityRequirement(name = "bearer-key")
+)
+@SecurityScheme(
+    name = "bearer-key",
+    type = SecuritySchemeType.HTTP,
+    scheme = "bearer",
+    bearerFormat = "JWT"
+)
 public class SecurityConfigurations {
 
     @Autowired
     private SecurityFilter securityFilter;
+
+    @Value("${CORS_ORIGIN:http://localhost,http://localhost:80,http://localhost:3000,http://localhost:3001,http://localhost:5173}")
+    private String corsOrigins;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -51,7 +70,7 @@ public class SecurityConfigurations {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173")); // Libera seu Front
+        configuration.setAllowedOrigins(java.util.Arrays.asList(corsOrigins.split(",")));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

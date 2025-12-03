@@ -1,0 +1,58 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:16
+    container_name: pronus_db
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/database/seed.sql:/docker-entrypoint-initdb.d/seed.sql:ro
+
+  backend:
+    image: pronus_back:1.0
+    container_name: pronus-backend
+    environment:
+    - PORT=${PORT}
+    - SERVER_PORT=${PORT}
+    - JWT_SECRET=${JWT_SECRET}
+    - CORS_ORIGIN=${CORS_ORIGIN}
+    - DB_HOST=${DB_HOST}
+    - DB_PORT=${DB_PORT}
+    - DB_USER=${DB_USER}
+    - DB_PASSWORD=${DB_PASSWORD}
+    - DB_NAME=${DB_NAME}
+    - SPRING_DATASOURCE_URL=jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+    - SPRING_DATASOURCE_USERNAME=${DB_USER}
+    - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "8080:8080"
+    # Conecta em banco local (host.docker.internal); db do compose é opcional
+    networks:
+      - sql-com
+    restart: unless-stopped
+
+  frontend:
+    image: pronus_front:1.0
+    container_name: pronus-frontend
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      - PORT=${PORT_F}
+    ports:
+      - "80:80"
+    networks:
+      - sql-com
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+
+networks:
+  sql-com:
+    driver: bridge

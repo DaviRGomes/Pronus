@@ -11,4 +11,6 @@ public class ProfissionalDtoIn {
     private String endereco;
     private String certificados;
     private Integer experiencia;
+    private String login;
+    private String senha;
 }

@@ -7,6 +7,7 @@ import com.inatel.prototipo_ia.repository.ChatRepository;
 import com.inatel.prototipo_ia.repository.ProfissionalRepository;
 import com.inatel.prototipo_ia.repository.TratamentoRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +22,13 @@ public class ProfissionalService {
     private final ProfissionalRepository profissionalRepository;
     private final ChatRepository chatRepository;
     private final TratamentoRepository tratamentoRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public ProfissionalService(ProfissionalRepository profissionalRepository, ChatRepository chatRepository, TratamentoRepository tratamentoRepository) {
+    public ProfissionalService(ProfissionalRepository profissionalRepository, ChatRepository chatRepository, TratamentoRepository tratamentoRepository, PasswordEncoder passwordEncoder) {
         this.profissionalRepository = profissionalRepository;
         this.chatRepository = chatRepository;
         this.tratamentoRepository = tratamentoRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
@@ -36,6 +39,11 @@ public class ProfissionalService {
 
         ProfissionalEntity entity = new ProfissionalEntity();
         aplicarDtoNoEntity(entity, profissionalDto);
+
+        entity.setLogin(profissionalDto.getLogin());
+        if (profissionalDto.getSenha() != null) {
+            entity.setSenha(passwordEncoder.encode(profissionalDto.getSenha()));
+        }
 
         ProfissionalEntity salvo = profissionalRepository.save(entity);
         return toDto(salvo);

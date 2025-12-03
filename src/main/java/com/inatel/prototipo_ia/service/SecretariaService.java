@@ -5,6 +5,7 @@ import com.inatel.prototipo_ia.dto.out.SecretariaDtoOut;
 import com.inatel.prototipo_ia.entity.SecretariaEntity;
 import com.inatel.prototipo_ia.repository.SecretariaRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,31 +18,38 @@ import java.util.stream.Collectors;
 public class SecretariaService {
 
     private final SecretariaRepository secretariaRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public SecretariaService(SecretariaRepository secretariaRepository) {
+    public SecretariaService(SecretariaRepository secretariaRepository, PasswordEncoder passwordEncoder) {
         this.secretariaRepository = secretariaRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     /**
-     * Cria uma nova secretária a partir de DTO In e retorna DTO Out.
+     * Cria um novo secretária a partir de DTO In e retorna DTO Out.
      */
     public SecretariaDtoOut criar(SecretariaDtoIn secretariaDto) {
         validarSecretariaDto(secretariaDto);
 
         // Validação de email único
         if (secretariaRepository.existsByEmail(secretariaDto.getEmail())) {
-            throw new IllegalStateException("Já existe uma secretária cadastrada com o email: " + secretariaDto.getEmail());
+            throw new IllegalStateException("Já existe um secretária cadastrado com o email: " + secretariaDto.getEmail());
         }
 
         SecretariaEntity entity = new SecretariaEntity();
         aplicarDtoNoEntity(entity, secretariaDto);
+
+        entity.setLogin(secretariaDto.getLogin());
+        if (secretariaDto.getSenha() != null) {
+            entity.setSenha(passwordEncoder.encode(secretariaDto.getSenha()));
+        }
 
         SecretariaEntity salvo = secretariaRepository.save(entity);
         return toDto(salvo);
     }
 
     /**
-     * Busca todas as secretárias e retorna lista de DTOs de saída.
+     * Busca todos as secretárias e retorna lista de DTOs de saída.
      */
     public List<SecretariaDtoOut> buscarTodos() {
         return secretariaRepository.findAll()
@@ -51,14 +59,14 @@ public class SecretariaService {
     }
 
     /**
-     * Busca uma secretária pelo seu ID e retorna DTO de saída.
+     * Busca um secretária pelo seu ID e retorna DTO de saída.
      */
     public Optional<SecretariaDtoOut> buscarPorId(Long id) {
         return secretariaRepository.findById(id).map(this::toDto);
     }
 
     /**
-     * Busca uma secretária por email.
+     * Busca um secretária por email.
      */
     public Optional<SecretariaDtoOut> buscarPorEmail(String email) {
         if (email == null || email.isBlank()) {
@@ -91,12 +99,12 @@ public class SecretariaService {
     }
 
     /**
-     * Atualiza os dados de uma secretária existente via DTO In e retorna DTO Out.
+     * Atualiza os dados de um secretária existente via DTO In e retorna DTO Out.
      */
     public SecretariaDtoOut atualizar(Long id, SecretariaDtoIn secretariaDto) {
         Optional<SecretariaEntity> optionalSecretaria = secretariaRepository.findById(id);
         if (optionalSecretaria.isEmpty()) {
-            throw new EntityNotFoundException("Secretária não encontrada com o ID: " + id);
+            throw new EntityNotFoundException("Secretária não encontrado com o ID: " + id);
         }
 
         validarSecretariaDto(secretariaDto);
@@ -106,7 +114,7 @@ public class SecretariaService {
         // Validação de email único (se estiver sendo alterado)
         if (!existente.getEmail().equals(secretariaDto.getEmail())) {
             if (secretariaRepository.existsByEmail(secretariaDto.getEmail())) {
-                throw new IllegalStateException("Já existe uma secretária cadastrada com o email: " + secretariaDto.getEmail());
+                throw new IllegalStateException("Já existe um secretária cadastrado com o email: " + secretariaDto.getEmail());
             }
         }
 
@@ -117,11 +125,11 @@ public class SecretariaService {
     }
 
     /**
-     * Deleta uma secretária.
+     * Deleta um secretária.
      */
     public void deletar(Long id) {
         if (!secretariaRepository.existsById(id)) {
-            throw new EntityNotFoundException("Secretária não encontrada com o ID: " + id);
+            throw new EntityNotFoundException("Secretária não encontrado com o ID: " + id);
         }
         secretariaRepository.deleteById(id);
     }
