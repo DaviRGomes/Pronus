@@ -86,10 +86,10 @@ public class RelatorioService {
                 .collect(Collectors.toList());
     }
 
-    public List<RelatorioDtoOut> buscarPorClienteIdEProfissionalId(Long clienteId, Long profissionalId) {
+    public List<RelatorioDtoOut> buscarPorClienteIdEProfissionalId(Long clienteId, Long especialistaId) {
         return chatRepository.findByClienteId(clienteId)
                 .stream()
-                .filter(c -> c.getProfissional() != null && c.getProfissional().getId().equals(profissionalId))
+                .filter(c -> c.getEspecialista() != null && c.getEspecialista().getId().equals(especialistaId))
                 .map(ChatEntity::getRelatorio)
                 .filter(r -> r != null)
                 .map(this::toDto)

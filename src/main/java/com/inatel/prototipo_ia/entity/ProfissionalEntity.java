@@ -17,9 +17,6 @@ public class ProfissionalEntity extends UsuarioEntity {
 
     private Integer experiencia;
 
-    // Relacionamento com Chat
-    @OneToMany(mappedBy = "profissional")
-    private List<ChatEntity> chats;
 
     // Relacionamento com Tratamento
     @OneToMany(mappedBy = "profissional")

@@ -58,8 +58,11 @@ public class SecurityConfigurations {
                     req.requestMatchers(HttpMethod.POST, "/clientes").permitAll();
                     req.requestMatchers(HttpMethod.POST, "/especialistas").permitAll();
                     req.requestMatchers(HttpMethod.POST, "/consultas").permitAll();
+                    req.requestMatchers(HttpMethod.POST, "/secretarias").permitAll();
+                    req.requestMatchers("/chats/**").authenticated();
                     req.requestMatchers("/api/pronunciation/**").permitAll();
                     req.requestMatchers("/error").permitAll();
+                    req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
                     req.anyRequest().authenticated();
                 })
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)

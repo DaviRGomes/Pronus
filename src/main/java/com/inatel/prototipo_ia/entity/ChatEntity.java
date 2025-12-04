@@ -6,8 +6,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "Chat")
-@Getter
-@Setter
+@Getter @Setter
 public class ChatEntity {
 
     @Id
@@ -16,20 +15,16 @@ public class ChatEntity {
 
     private Integer duracao;
 
-    @Column(name = "conversa", columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String conversa;
 
-    // Muitos chats para um cliente
-    @ManyToOne
-    @JoinColumn(name = "cliente_id", nullable = false)
-    private ClienteEntity cliente;
-
-    // Muitos chats para um profissional
-    @ManyToOne
-    @JoinColumn(name = "profissional_id", nullable = false)
-    private ProfissionalEntity profissional;
-
-    // Relatório 1:1
     @OneToOne(mappedBy = "chat", cascade = CascadeType.ALL)
     private RelatorioEntity relatorio;
+
+    @ManyToOne @JoinColumn(name = "cliente_id", nullable = false)
+    private ClienteEntity cliente;
+
+    // --- ALTERADO DE PROFISSIONAL PARA ESPECIALISTA ---
+    @ManyToOne @JoinColumn(name = "especialista_id", nullable = false)
+    private EspecialistaEntity especialista;
 }
