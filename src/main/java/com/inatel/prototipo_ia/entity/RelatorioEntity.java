@@ -3,6 +3,7 @@ package com.inatel.prototipo_ia.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import com.inatel.prototipo_ia.entity.EspecialistaEntity;
 
 @Entity
 @Table(name = "Relatorio")
@@ -23,4 +24,9 @@ public class RelatorioEntity {
     @OneToOne
     @JoinColumn(name = "chat_id", nullable = false, unique = true)
     private ChatEntity chat;
+
+    // Especialista responsável (opcional)
+    @ManyToOne
+    @JoinColumn(name = "especialista_id", nullable = true)
+    private EspecialistaEntity especialista;
 }

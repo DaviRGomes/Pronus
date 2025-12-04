@@ -6,6 +6,8 @@ import com.inatel.prototipo_ia.entity.ChatEntity;
 import com.inatel.prototipo_ia.entity.RelatorioEntity;
 import com.inatel.prototipo_ia.repository.ChatRepository;
 import com.inatel.prototipo_ia.repository.RelatorioRepository;
+import com.inatel.prototipo_ia.repository.EspecialistaRepository;
+import com.inatel.prototipo_ia.entity.EspecialistaEntity;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +22,12 @@ public class RelatorioService {
 
     private final RelatorioRepository relatorioRepository;
     private final ChatRepository chatRepository;
+    private final EspecialistaRepository especialistaRepository;
 
-    public RelatorioService(RelatorioRepository relatorioRepository, ChatRepository chatRepository) {
+    public RelatorioService(RelatorioRepository relatorioRepository, ChatRepository chatRepository, EspecialistaRepository especialistaRepository) {
         this.relatorioRepository = relatorioRepository;
         this.chatRepository = chatRepository;
+        this.especialistaRepository = especialistaRepository;
     }
 
     /**
@@ -51,6 +55,14 @@ public class RelatorioService {
         aplicarDtoNoEntity(entity, relatorioDto);
         entity.setChat(chat);
 
+        if (relatorioDto.getEspecialistaId() != null) {
+            Optional<EspecialistaEntity> optionalEspecialista = especialistaRepository.findById(relatorioDto.getEspecialistaId());
+            if (optionalEspecialista.isEmpty()) {
+                throw new EntityNotFoundException("Especialista não encontrado com o ID: " + relatorioDto.getEspecialistaId());
+            }
+            entity.setEspecialista(optionalEspecialista.get());
+        }
+
         RelatorioEntity salvo = relatorioRepository.save(entity);
         return toDto(salvo);
     }
@@ -60,6 +72,32 @@ public class RelatorioService {
      */
     public List<RelatorioDtoOut> buscarTodos() {
         return relatorioRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<RelatorioDtoOut> buscarPorClienteId(Long clienteId) {
+        return chatRepository.findByClienteId(clienteId)
+                .stream()
+                .map(ChatEntity::getRelatorio)
+                .filter(r -> r != null)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<RelatorioDtoOut> buscarPorClienteIdEProfissionalId(Long clienteId, Long profissionalId) {
+        return chatRepository.findByClienteId(clienteId)
+                .stream()
+                .filter(c -> c.getProfissional() != null && c.getProfissional().getId().equals(profissionalId))
+                .map(ChatEntity::getRelatorio)
+                .filter(r -> r != null)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    public List<RelatorioDtoOut> buscarPorClienteIdEEspecialistaId(Long clienteId, Long especialistaId) {
+        return relatorioRepository.findByChatClienteIdAndEspecialistaId(clienteId, especialistaId)
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -117,6 +155,7 @@ public class RelatorioService {
         dto.setAcuracia(entity.getAcuracia());
         dto.setAnaliseFono(entity.getAnaliseFono());
         dto.setChatId(entity.getChat().getId());
+        // Nota: especialidade/espId pode ser adicionado no DTO out futuramente
         return dto;
     }
 

@@ -2,8 +2,11 @@ package com.inatel.prototipo_ia.controller;
 
 import com.inatel.prototipo_ia.dto.in.RelatorioDtoIn;
 import com.inatel.prototipo_ia.dto.out.RelatorioDtoOut;
+import com.inatel.prototipo_ia.entity.UsuarioEntity;
+import com.inatel.prototipo_ia.repository.ProfissionalRepository;
 import com.inatel.prototipo_ia.service.RelatorioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +20,9 @@ public class RelatorioController {
     @Autowired
     private RelatorioService service;
 
+    @Autowired
+    private ProfissionalRepository profissionalRepository;
+
     // Criar relatório
     @PostMapping
     public ResponseEntity<RelatorioDtoOut> criar(@RequestBody RelatorioDtoIn relatorio) {
@@ -26,14 +32,21 @@ public class RelatorioController {
 
     // Buscar todos os relatórios
     @GetMapping
-    public ResponseEntity<List<RelatorioDtoOut>> buscarTodos() {
+    public ResponseEntity<List<RelatorioDtoOut>> buscarTodos(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
         List<RelatorioDtoOut> relatorios = service.buscarTodos();
         return ResponseEntity.ok(relatorios);
     }
 
     // Buscar relatório por ID
     @GetMapping("/{id}")
-    public ResponseEntity<RelatorioDtoOut> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<RelatorioDtoOut> buscarPorId(@PathVariable Long id,
+                                                       @AuthenticationPrincipal UsuarioEntity principal) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
         Optional<RelatorioDtoOut> relatorio = service.buscarPorId(id);
         return relatorio.map(ResponseEntity::ok)
                        .orElse(ResponseEntity.notFound().build());
@@ -41,7 +54,11 @@ public class RelatorioController {
 
     // Buscar relatório por ID do chat
     @GetMapping("/chat/{chatId}")
-    public ResponseEntity<RelatorioDtoOut> buscarPorChatId(@PathVariable Long chatId) {
+    public ResponseEntity<RelatorioDtoOut> buscarPorChatId(@PathVariable Long chatId,
+                                                           @AuthenticationPrincipal UsuarioEntity principal) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
         Optional<RelatorioDtoOut> relatorio = service.buscarPorChatId(chatId);
         return relatorio.map(ResponseEntity::ok)
                        .orElse(ResponseEntity.notFound().build());

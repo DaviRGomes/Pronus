@@ -2,8 +2,17 @@ package com.inatel.prototipo_ia.controller;
 
 import com.inatel.prototipo_ia.dto.in.ClienteDtoIn;
 import com.inatel.prototipo_ia.dto.out.ClienteDtoOut;
+import com.inatel.prototipo_ia.dto.out.ChatDtoOut;
+import com.inatel.prototipo_ia.dto.out.ConsultaDtoOut;
+import com.inatel.prototipo_ia.dto.out.RelatorioDtoOut;
+import com.inatel.prototipo_ia.entity.UsuarioEntity;
+import com.inatel.prototipo_ia.repository.ClienteRepository;
+import com.inatel.prototipo_ia.service.ChatService;
 import com.inatel.prototipo_ia.service.ClienteService;
+import com.inatel.prototipo_ia.service.ConsultaService;
+import com.inatel.prototipo_ia.service.RelatorioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +26,18 @@ public class ClienteController {
 
     @Autowired
     private ClienteService service;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    @Autowired
+    private ConsultaService consultaService;
+
+    @Autowired
+    private ChatService chatService;
+
+    @Autowired
+    private RelatorioService relatorioService;
 
     // Criar cliente (DTO In -> DTO Out)
     @PostMapping
@@ -32,6 +53,15 @@ public class ClienteController {
         return ResponseEntity.ok(clientes);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ClienteDtoOut> me(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!clienteRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        Optional<ClienteDtoOut> cliente = service.buscarPorId(principal.getId());
+        return cliente.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
     // Buscar cliente por ID (DTO Out)
     @GetMapping("/{id}")
     public ResponseEntity<ClienteDtoOut> buscarPorId(@PathVariable Long id) {
@@ -39,6 +69,25 @@ public class ClienteController {
         return cliente.map(ResponseEntity::ok)
                      .orElse(ResponseEntity.notFound().build());
     }
+
+    @GetMapping("/me/consultas")
+    public ResponseEntity<List<ConsultaDtoOut>> minhasConsultas(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!clienteRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        List<ConsultaDtoOut> consultas = consultaService.buscarPorClienteId(principal.getId());
+        return ResponseEntity.ok(consultas);
+    }
+
+    @GetMapping("/me/chats")
+    public ResponseEntity<List<ChatDtoOut>> meusChats(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!clienteRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        List<ChatDtoOut> chats = chatService.buscarPorClienteId(principal.getId());
+        return ResponseEntity.ok(chats);
+    }
+
 
     // Buscar clientes maiores de 18 anos (DTO Out)
     @GetMapping("/maiores-idade")

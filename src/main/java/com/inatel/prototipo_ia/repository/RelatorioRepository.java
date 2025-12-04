@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface RelatorioRepository extends JpaRepository<RelatorioEntity, Long> {
@@ -15,4 +16,7 @@ public interface RelatorioRepository extends JpaRepository<RelatorioEntity, Long
 
     // Verifica s existe um relatório para um chat.
     boolean existsByChatId(Long chatId);
+
+    // Buscar relatórios por cliente e especialista
+    List<RelatorioEntity> findByChatClienteIdAndEspecialistaId(Long clienteId, Long especialistaId);
 }

@@ -9,4 +9,5 @@ public class RelatorioDtoIn {
     private Float acuracia;
     private String analiseFono;
     private Long chatId;
+    private Long especialistaId;
 }

@@ -1,9 +1,16 @@
 package com.inatel.prototipo_ia.controller;
 
 import com.inatel.prototipo_ia.dto.in.ProfissionalDtoIn;
+import com.inatel.prototipo_ia.dto.out.ChatDtoOut;
 import com.inatel.prototipo_ia.dto.out.ProfissionalDtoOut;
+import com.inatel.prototipo_ia.dto.out.RelatorioDtoOut;
+import com.inatel.prototipo_ia.entity.UsuarioEntity;
+import com.inatel.prototipo_ia.repository.ProfissionalRepository;
 import com.inatel.prototipo_ia.service.ProfissionalService;
+import com.inatel.prototipo_ia.service.ChatService;
+import com.inatel.prototipo_ia.service.RelatorioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +23,15 @@ public class ProfissionalController {
 
     @Autowired
     private ProfissionalService service;
+
+    @Autowired
+    private ProfissionalRepository profissionalRepository;
+
+    @Autowired
+    private ChatService chatService;
+
+    @Autowired
+    private RelatorioService relatorioService;
 
     // Criar profissional
     @PostMapping
@@ -31,12 +47,40 @@ public class ProfissionalController {
         return ResponseEntity.ok(profissionais);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<ProfissionalDtoOut> me(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        Optional<ProfissionalDtoOut> profissional = service.buscarPorId(principal.getId());
+        return profissional.map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
     // Buscar profissional por ID
     @GetMapping("/{id}")
     public ResponseEntity<ProfissionalDtoOut> buscarPorId(@PathVariable Long id) {
         Optional<ProfissionalDtoOut> profissional = service.buscarPorId(id);
         return profissional.map(ResponseEntity::ok)
                           .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/me/chats")
+    public ResponseEntity<List<ChatDtoOut>> meusChats(@AuthenticationPrincipal UsuarioEntity principal) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        List<ChatDtoOut> chats = chatService.buscarPorProfissionalId(principal.getId());
+        return ResponseEntity.ok(chats);
+    }
+
+    @GetMapping("/me/relatorios/cliente/{clienteId}")
+    public ResponseEntity<List<RelatorioDtoOut>> relatoriosDoCliente(@AuthenticationPrincipal UsuarioEntity principal,
+                                                                     @PathVariable Long clienteId) {
+        if (!profissionalRepository.existsById(principal.getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        List<RelatorioDtoOut> relatorios = relatorioService.buscarPorClienteIdEProfissionalId(clienteId, principal.getId());
+        return ResponseEntity.ok(relatorios);
     }
 
     // Buscar profissionais experientes (mais de 5 anos)
