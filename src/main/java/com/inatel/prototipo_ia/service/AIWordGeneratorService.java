@@ -110,7 +110,6 @@ public class AIWordGeneratorService {
                 MediaType.parse("application/json")
         );
 
-        // URL da API (alterado para gemini-pro, que é o modelo estável desta API)
         String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + geminiApiKey;
 
         Request request = new Request.Builder()
