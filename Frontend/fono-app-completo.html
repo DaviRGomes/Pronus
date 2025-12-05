@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FonoFlow - Treino de Pronúncia com IA</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .pulse { animation: pulse 1s infinite; }
+        .spin { animation: spin 1s linear infinite; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 4px; }
+        .btn { padding: 12px 24px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.2); }
+        .btn-success { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+        .card { background: rgba(30,41,59,0.8); border-radius: 16px; padding: 24px; border: 1px solid rgba(255,255,255,0.1); }
+        .input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); background: rgba(15,23,42,0.6); color: #fff; font-size: 15px; outline: none; transition: all 0.2s; }
+        .input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+        .nav-item { padding: 12px 20px; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; color: #94a3b8; }
+        .nav-item:hover { background: rgba(99,102,241,0.1); color: #e2e8f0; }
+        .nav-item.active { background: rgba(99,102,241,0.2); color: #fff; }
+        .stat-card { background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2)); border-radius: 16px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 32px; font-weight: 700; color: #fff; }
+        .stat-label { font-size: 13px; color: #94a3b8; margin-top: 4px; }
+        .progress-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 4px; transition: width 0.5s; }
+        .badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .badge-success { background: rgba(34,197,94,0.2); color: #22c55e; }
+        .badge-warning { background: rgba(234,179,8,0.2); color: #eab308; }
+        .badge-error { background: rgba(239,68,68,0.2); color: #ef4444; }
+        @media print { .no-print { display: none !important; } }
+    </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+const API = 'http://localhost:8080';
+
+// ==================== APP ====================
+function App() {
+    const [user, setUser] = useState(null);
+    const [token, setToken] = useState(localStorage.getItem('fono_token'));
+    const [view, setView] = useState('login');
+    const [especialista, setEspecialista] = useState(null);
+
+    useEffect(() => {
+        const u = localStorage.getItem('fono_user');
+        if (u && token) { 
+            setUser(JSON.parse(u)); 
+            setView('dashboard'); 
+        }
+    }, []);
+
+    const login = (u, t) => {
+        setUser(u); setToken(t);
+        localStorage.setItem('fono_token', t);
+        localStorage.setItem('fono_user', JSON.stringify(u));
+        setView('dashboard');
+    };
+
+    const logout = () => {
+        setUser(null); setToken(null);
+        localStorage.removeItem('fono_token');
+        localStorage.removeItem('fono_user');
+        setView('login');
+    };
+
+    return (
+        <div style={{minHeight:'100vh'}}>
+            {view === 'login' && <LoginScreen onLogin={login} />}
+            {view === 'register' && <RegisterScreen onBack={() => setView('login')} onSuccess={() => setView('login')} />}
+            {view === 'dashboard' && <MainApp user={user} token={token} onLogout={logout} />}
+        </div>
+    );
+}
+
+// ==================== LOGIN ====================
+function LoginScreen({ onLogin }) {
+    const [login, setLogin] = useState('');
+    const [senha, setSenha] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const submit = async (e) => {
+        e.preventDefault();
+        setLoading(true); setError('');
+        try {
+            const res = await fetch(`${API}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ login, senha })
+            });
+            if (!res.ok) throw new Error('Credenciais inválidas');
+            const data = await res.json();
+            onLogin({ id: data.id, nome: data.nome, tipo: data.tipoUsuario }, data.token);
+        } catch (err) {
+            setError(err.message);
+        }
+        setLoading(false);
+    };
+
+    return (
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:20}}>
+            <div className="card" style={{maxWidth:420,width:'100%',padding:48}}>
+                <div style={{textAlign:'center',marginBottom:32}}>
+                    <div style={{fontSize:64,marginBottom:16}}>🗣️</div>
+                    <h1 style={{color:'#f8fafc',fontSize:32,margin:0}}>FonoFlow</h1>
+                    <p style={{color:'#94a3b8',marginTop:8}}>Treino de pronúncia com IA</p>
+                </div>
+                <form onSubmit={submit}>
+                    <div style={{marginBottom:20}}>
+                        <label style={{color:'#e2e8f0',display:'block',marginBottom:8,fontSize:14}}>Login</label>
+                        <input className="input" value={login} onChange={e => setLogin(e.target.value)} placeholder="Digite seu login" required />
+                    </div>
+                    <div style={{marginBottom:20}}>
+                        <label style={{color:'#e2e8f0',display:'block',marginBottom:8,fontSize:14}}>Senha</label>
+                        <input className="input" type="password" value={senha} onChange={e => setSenha(e.target.value)} placeholder="Digite sua senha" required />
+                    </div>
+                    {error && <div style={{background:'rgba(239,68,68,0.2)',borderRadius:12,padding:12,color:'#fca5a5',marginBottom:20}}>⚠️ {error}</div>}
+                    <button type="submit" className="btn btn-primary" disabled={loading} style={{width:'100%',padding:16,fontSize:16}}>
+                        {loading ? '⏳ Entrando...' : 'Entrar'}
+                    </button>
+                </form>
+                <div style={{marginTop:24,textAlign:'center'}}>
+                    <p style={{color:'#64748b',fontSize:13}}>Ainda não tem conta?</p>
+                    <button onClick={() => window.location.hash = 'register'} className="btn btn-secondary" style={{marginTop:8}}>
+                        Criar Conta
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ==================== REGISTRO ====================
+function RegisterScreen({ onBack, onSuccess }) {
+    const [form, setForm] = useState({ nome: '', idade: '', login: '', senha: '', nivel: 'INICIANTE' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState(false);
+
+    const submit = async (e) => {
+        e.preventDefault();
+        setLoading(true); setError('');
+        try {
+            const res = await fetch(`${API}/clientes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...form, idade: parseInt(form.idade) })
+            });
+            if (!res.ok) throw new Error('Erro ao criar conta');
+            setSuccess(true);
+            setTimeout(onSuccess, 2000);
+        } catch (err) {
+            setError(err.message);
+        }
+        setLoading(false);
+    };
+
+    if (success) {
+        return (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh'}}>
+                <div className="card" style={{textAlign:'center',padding:48}}>
+                    <div style={{fontSize:64,marginBottom:16}}>✅</div>
+                    <h2 style={{color:'#22c55e',margin:0}}>Conta criada com sucesso!</h2>
+                    <p style={{color:'#94a3b8',marginTop:12}}>Redirecionando para o login...</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'100vh',padding:20}}>
+            <div className="card" style={{maxWidth:420,width:'100%',padding:48}}>
+                <button onClick={onBack} style={{background:'none',border:'none',color:'#94a3b8',cursor:'pointer',marginBottom:16}}>← Voltar</button>
+                <h2 style={{color:'#f8fafc',marginBottom:24}}>Criar Conta</h2>
+                <form onSubmit={submit}>
+                    {[
+                        { key: 'nome', label: 'Nome Completo', type: 'text', placeholder: 'Seu nome' },
+                        { key: 'idade', label: 'Idade', type: 'number', placeholder: 'Sua idade' },
+                        { key: 'login', label: 'Login', type: 'text', placeholder: 'Escolha um login' },
+                        { key: 'senha', label: 'Senha', type: 'password', placeholder: 'Escolha uma senha' },
+                    ].map(f => (
+                        <div key={f.key} style={{marginBottom:16}}>
+                            <label style={{color:'#e2e8f0',display:'block',marginBottom:8,fontSize:14}}>{f.label}</label>
+                            <input className="input" type={f.type} value={form[f.key]} onChange={e => setForm({...form, [f.key]: e.target.value})} placeholder={f.placeholder} required />
+                        </div>
+                    ))}
+                    {error && <div style={{background:'rgba(239,68,68,0.2)',borderRadius:12,padding:12,color:'#fca5a5',marginBottom:20}}>⚠️ {error}</div>}
+                    <button type="submit" className="btn btn-primary" disabled={loading} style={{width:'100%',padding:16}}>
+                        {loading ? '⏳ Criando...' : 'Criar Conta'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ==================== MAIN APP ====================
+function MainApp({ user, token, onLogout }) {
+    const [currentPage, setCurrentPage] = useState('home');
+    const [especialistas, setEspecialistas] = useState([]);
+    const [selectedEsp, setSelectedEsp] = useState(null);
+    const [sessoes, setSessoes] = useState([]);
+    const [loadingSessoes, setLoadingSessoes] = useState(false);
+
+    useEffect(() => {
+        fetchEspecialistas();
+        fetchSessoes();
+    }, []);
+
+    const fetchEspecialistas = async () => {
+        try {
+            const res = await fetch(`${API}/especialistas`, { headers: { Authorization: `Bearer ${token}` }});
+            const data = await res.json();
+            setEspecialistas(data);
+            if (data.length) setSelectedEsp(data[0]);
+        } catch (e) { console.error(e); }
+    };
+
+    const fetchSessoes = async () => {
+        setLoadingSessoes(true);
+        try {
+            // Buscar sessões do cliente (simulado com consultas por enquanto)
+            const res = await fetch(`${API}/consultas/cliente/${user.id}`, { headers: { Authorization: `Bearer ${token}` }});
+            if (res.ok) {
+                const data = await res.json();
+                setSessoes(data);
+            }
+        } catch (e) { console.error(e); }
+        setLoadingSessoes(false);
+    };
+
+    const pages = {
+        home: <HomePage user={user} sessoes={sessoes} onStartSession={() => setCurrentPage('session')} />,
+        session: <SessionPage user={user} token={token} especialista={selectedEsp} onBack={() => { setCurrentPage('home'); fetchSessoes(); }} />,
+        history: <HistoryPage user={user} token={token} sessoes={sessoes} />,
+        reports: <ReportsPage user={user} token={token} />,
+        profile: <ProfilePage user={user} token={token} especialistas={especialistas} selectedEsp={selectedEsp} setSelectedEsp={setSelectedEsp} />,
+    };
+
+    return (
+        <div style={{display:'flex',minHeight:'100vh'}}>
+            {/* Sidebar */}
+            <aside style={{width:260,background:'rgba(15,23,42,0.9)',padding:20,display:'flex',flexDirection:'column',borderRight:'1px solid rgba(255,255,255,0.1)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:32}}>
+                    <span style={{fontSize:32}}>🗣️</span>
+                    <span style={{color:'#f8fafc',fontSize:20,fontWeight:700}}>FonoFlow</span>
+                </div>
+
+                <nav style={{flex:1}}>
+                    {[
+                        { id: 'home', icon: '🏠', label: 'Início' },
+                        { id: 'session', icon: '🎤', label: 'Nova Sessão' },
+                        { id: 'history', icon: '📊', label: 'Histórico' },
+                        { id: 'reports', icon: '📄', label: 'Relatórios' },
+                        { id: 'profile', icon: '👤', label: 'Perfil' },
+                    ].map(item => (
+                        <div key={item.id} className={`nav-item ${currentPage === item.id ? 'active' : ''}`} onClick={() => setCurrentPage(item.id)}>
+                            <span style={{fontSize:20}}>{item.icon}</span>
+                            <span>{item.label}</span>
+                        </div>
+                    ))}
+                </nav>
+
+                <div style={{borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:20}}>
+                    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+                        <div style={{width:40,height:40,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:600}}>
+                            {user.nome.charAt(0)}
+                        </div>
+                        <div>
+                            <div style={{color:'#f8fafc',fontSize:14,fontWeight:600}}>{user.nome}</div>
+                            <div style={{color:'#64748b',fontSize:12}}>{user.tipo}</div>
+                        </div>
+                    </div>
+                    <button onClick={onLogout} className="btn btn-secondary" style={{width:'100%'}}>
+                        Sair
+                    </button>
+                </div>
+            </aside>
+
+            {/* Main Content */}
+            <main style={{flex:1,padding:32,overflow:'auto'}}>
+                {pages[currentPage]}
+            </main>
+        </div>
+    );
+}
+
+// ==================== HOME PAGE ====================
+function HomePage({ user, sessoes, onStartSession }) {
+    // Calcular estatísticas
+    const totalSessoes = sessoes.length;
+    const pontuacaoMedia = 75; // Simulado
+    const sequencia = 3; // Dias seguidos
+
+    return (
+        <div>
+            <div style={{marginBottom:32}}>
+                <h1 style={{color:'#f8fafc',fontSize:28,margin:0}}>Olá, {user.nome.split(' ')[0]}! 👋</h1>
+                <p style={{color:'#94a3b8',marginTop:8}}>Pronto para melhorar sua pronúncia hoje?</p>
+            </div>
+
+            {/* Stats */}
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:20,marginBottom:32}}>
+                <div className="stat-card">
+                    <div className="stat-value">{totalSessoes}</div>
+                    <div className="stat-label">Sessões Realizadas</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-value">{pontuacaoMedia}%</div>
+                    <div className="stat-label">Pontuação Média</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-value">{sequencia} 🔥</div>
+                    <div className="stat-label">Dias Seguidos</div>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="card" style={{marginBottom:32}}>
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:20}}>Iniciar Treino Rápido</h2>
+                <p style={{color:'#94a3b8',marginBottom:24}}>Escolha uma dificuldade e comece a treinar agora mesmo!</p>
+                <button onClick={onStartSession} className="btn btn-primary" style={{display:'flex',alignItems:'center',gap:12,padding:'16px 32px',fontSize:16}}>
+                    <span style={{fontSize:24}}>🎤</span>
+                    Iniciar Nova Sessão
+                </button>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="card">
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:20}}>Atividade Recente</h2>
+                {sessoes.length === 0 ? (
+                    <p style={{color:'#64748b',textAlign:'center',padding:32}}>Nenhuma sessão realizada ainda. Comece agora! 🚀</p>
+                ) : (
+                    <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                        {sessoes.slice(0, 5).map((s, i) => (
+                            <div key={i} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:16,background:'rgba(15,23,42,0.6)',borderRadius:12}}>
+                                <div style={{display:'flex',alignItems:'center',gap:12}}>
+                                    <span style={{fontSize:24}}>📅</span>
+                                    <div>
+                                        <div style={{color:'#f8fafc',fontWeight:500}}>{s.tipo || 'Sessão de Treino'}</div>
+                                        <div style={{color:'#64748b',fontSize:13}}>{s.data || 'Hoje'}</div>
+                                    </div>
+                                </div>
+                                <span className="badge badge-success">{s.status || 'Concluída'}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ==================== SESSION PAGE ====================
+function SessionPage({ user, token, especialista, onBack }) {
+    const [stage, setStage] = useState('setup'); // setup, session, result
+    const [dificuldade, setDificuldade] = useState('R');
+    const [sessaoId, setSessaoId] = useState(null);
+    const [msgs, setMsgs] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [recording, setRecording] = useState(false);
+    const [audioBlob, setAudioBlob] = useState(null);
+    const [resultado, setResultado] = useState(null);
+    const mediaRef = useRef(null);
+    const chunksRef = useRef([]);
+    const endRef = useRef(null);
+
+    const difs = [
+        { v: 'R', l: 'R', d: 'rato, carro', icon: '🔴' },
+        { v: 'L', l: 'L', d: 'lua, bola', icon: '🔵' },
+        { v: 'S', l: 'S', d: 'sapo, massa', icon: '🟢' },
+        { v: 'CH', l: 'CH', d: 'chuva, bicho', icon: '🟡' },
+        { v: 'X', l: 'X', d: 'Xuxa, Sasha', icon: '🟣' },
+        { v: 'LH', l: 'LH', d: 'palha, filho', icon: '🟠' },
+    ];
+
+    useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [msgs]);
+
+    const startSession = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API}/api/sessao-treino/iniciar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ clienteId: user.id, especialistaId: especialista?.id || 8, dificuldade, idade: 25 })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.erro || 'Erro ao iniciar');
+            if (Array.isArray(data)) {
+                setMsgs(data.map(m => ({ id: Math.random(), type: 'bot', ...m, ts: new Date() })));
+                if (data[0]?.sessaoId) setSessaoId(data[0].sessaoId);
+            }
+            setStage('session');
+        } catch (e) {
+            alert('Erro: ' + e.message);
+        }
+        setLoading(false);
+    };
+
+    const startRec = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRef.current = new MediaRecorder(stream);
+            chunksRef.current = [];
+            mediaRef.current.ondataavailable = e => chunksRef.current.push(e.data);
+            mediaRef.current.onstop = () => {
+                setAudioBlob(new Blob(chunksRef.current, { type: 'audio/webm' }));
+                stream.getTracks().forEach(t => t.stop());
+            };
+            mediaRef.current.start();
+            setRecording(true);
+        } catch (e) {
+            alert('Erro ao acessar microfone: ' + e.message);
+        }
+    };
+
+    const stopRec = () => { 
+        if (mediaRef.current) { 
+            mediaRef.current.stop(); 
+            setRecording(false); 
+        } 
+    };
+
+    const sendAudio = async () => {
+        if (!audioBlob || !sessaoId) return;
+        setLoading(true);
+        setMsgs(p => [...p, { id: Math.random(), type: 'user', mensagem: '🎤 Áudio enviado', ts: new Date() }]);
+        try {
+            const fd = new FormData();
+            fd.append('audio', audioBlob, 'audio.webm');
+            const res = await fetch(`${API}/api/sessao-treino/${sessaoId}/audio?usarGemini=true`, {
+                method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.erro || 'Erro');
+            if (Array.isArray(data)) {
+                setMsgs(p => [...p, ...data.map(m => ({ id: Math.random(), type: 'bot', ...m, ts: new Date() }))]);
+                const finalMsg = data.find(m => m.sessaoFinalizada);
+                if (finalMsg) {
+                    setResultado(finalMsg);
+                    setStage('result');
+                }
+            }
+            setAudioBlob(null);
+        } catch (e) {
+            setMsgs(p => [...p, { id: Math.random(), type: 'error', mensagem: e.message, ts: new Date() }]);
+        }
+        setLoading(false);
+    };
+
+    // SETUP STAGE
+    if (stage === 'setup') {
+        return (
+            <div>
+                <button onClick={onBack} className="btn btn-secondary" style={{marginBottom:24}}>← Voltar</button>
+                <div className="card" style={{maxWidth:600,margin:'0 auto',textAlign:'center'}}>
+                    <div style={{fontSize:64,marginBottom:16}}>🎯</div>
+                    <h2 style={{color:'#f8fafc',fontSize:28,marginBottom:8}}>Configurar Sessão</h2>
+                    <p style={{color:'#94a3b8',marginBottom:32}}>Escolha o fonema que deseja praticar:</p>
+                    
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3, 1fr)',gap:12,marginBottom:32}}>
+                        {difs.map(d => (
+                            <button key={d.v} onClick={() => setDificuldade(d.v)}
+                                style={{padding:20,borderRadius:16,border: dificuldade === d.v ? '3px solid #6366f1' : '2px solid rgba(255,255,255,0.1)',
+                                background: dificuldade === d.v ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.6)',cursor:'pointer',transition:'all 0.2s'}}>
+                                <div style={{fontSize:32,marginBottom:8}}>{d.icon}</div>
+                                <div style={{color:'#f8fafc',fontWeight:700,fontSize:18}}>{d.l}</div>
+                                <div style={{color:'#64748b',fontSize:12,marginTop:4}}>{d.d}</div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <button onClick={startSession} className="btn btn-primary" disabled={loading} style={{padding:'16px 48px',fontSize:18}}>
+                        {loading ? '⏳ Preparando...' : '🚀 Começar Treino'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // RESULT STAGE
+    if (stage === 'result') {
+        const resumo = resultado?.resumoSessao || {};
+        return (
+            <div>
+                <div className="card" style={{maxWidth:600,margin:'0 auto',textAlign:'center'}} id="resultado-sessao">
+                    <div style={{fontSize:64,marginBottom:16}}>🏆</div>
+                    <h2 style={{color:'#f8fafc',fontSize:28,marginBottom:24}}>Sessão Finalizada!</h2>
+                    
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:20,marginBottom:32}}>
+                        <div className="stat-card">
+                            <div className="stat-value" style={{color:'#22c55e'}}>{resumo.totalAcertos || 0}/{resumo.totalPalavras || 0}</div>
+                            <div className="stat-label">Acertos</div>
+                        </div>
+                        <div className="stat-card">
+                            <div className="stat-value" style={{color:'#6366f1'}}>{(resumo.pontuacaoGeral || 0).toFixed(0)}%</div>
+                            <div className="stat-label">Pontuação</div>
+                        </div>
+                    </div>
+
+                    {resumo.pontosFortes?.length > 0 && (
+                        <div style={{textAlign:'left',marginBottom:16}}>
+                            <h3 style={{color:'#22c55e',fontSize:16,marginBottom:8}}>💪 Pontos Fortes:</h3>
+                            {resumo.pontosFortes.map((p, i) => (
+                                <p key={i} style={{color:'#94a3b8',marginLeft:16}}>• {p}</p>
+                            ))}
+                        </div>
+                    )}
+
+                    {resumo.pontosAMelhorar?.length > 0 && (
+                        <div style={{textAlign:'left',marginBottom:24}}>
+                            <h3 style={{color:'#eab308',fontSize:16,marginBottom:8}}>📈 A Melhorar:</h3>
+                            {resumo.pontosAMelhorar.map((p, i) => (
+                                <p key={i} style={{color:'#94a3b8',marginLeft:16}}>• {p}</p>
+                            ))}
+                        </div>
+                    )}
+
+                    <div style={{display:'flex',gap:12,justifyContent:'center'}} className="no-print">
+                        <button onClick={() => { setStage('setup'); setMsgs([]); setSessaoId(null); setResultado(null); }} className="btn btn-primary">
+                            🔄 Nova Sessão
+                        </button>
+                        <button onClick={() => {
+                            const element = document.getElementById('resultado-sessao');
+                            html2pdf().set({ margin: 10, filename: `sessao-${Date.now()}.pdf` }).from(element).save();
+                        }} className="btn btn-secondary">
+                            📄 Exportar PDF
+                        </button>
+                        <button onClick={onBack} className="btn btn-secondary">
+                            🏠 Voltar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // SESSION STAGE
+    return (
+        <div style={{display:'flex',flexDirection:'column',height:'calc(100vh - 64px)'}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}} className="no-print">
+                <button onClick={onBack} className="btn btn-secondary">← Voltar</button>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                    <span style={{color:'#f8fafc',fontWeight:600}}>Fonema:</span>
+                    <span className="badge badge-success" style={{fontSize:16,padding:'8px 16px'}}>{dificuldade}</span>
+                </div>
+            </div>
+
+            {/* Messages */}
+            <div className="card" style={{flex:1,overflow:'auto',marginBottom:16}}>
+                <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                    {msgs.map(m => (
+                        <div key={m.id} style={{display:'flex',justifyContent: m.type === 'bot' ? 'flex-start' : 'flex-end',alignItems:'flex-end',gap:8}}>
+                            {m.type === 'bot' && <div style={{width:36,height:36,borderRadius:'50%',background:'linear-gradient(135deg,#6366f1,#8b5cf6)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>🤖</div>}
+                            <div style={{maxWidth:'75%',padding:16,borderRadius:16,
+                                background: m.type === 'bot' ? 'rgba(15,23,42,0.8)' : m.type === 'error' ? 'rgba(239,68,68,0.2)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                border: m.type === 'error' ? '1px solid rgba(239,68,68,0.3)' : 'none'}}>
+                                <p style={{color:'#f8fafc',margin:0,lineHeight:1.6}}>{m.mensagem}</p>
+                                {m.palavras?.map((p, i) => (
+                                    <div key={i} style={{marginTop:12,padding:20,background:'rgba(99,102,241,0.15)',borderRadius:12,textAlign:'center',border:'2px dashed rgba(99,102,241,0.4)'}}>
+                                        <span style={{color:'#e2e8f0',fontSize:20,fontWeight:600}}>📢 {p}</span>
+                                    </div>
+                                ))}
+                                {m.analise && (
+                                    <div style={{marginTop:16,background:'rgba(0,0,0,0.2)',borderRadius:12,padding:16}}>
+                                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:12}}>
+                                            <span style={{color:'#a5b4fc',fontWeight:600}}>📊 Análise</span>
+                                            <span style={{background:'#6366f1',padding:'4px 12px',borderRadius:20,color:'#fff',fontWeight:700}}>{(m.analise.pontuacaoGeral || 0).toFixed(0)}%</span>
+                                        </div>
+                                        {m.analise.resultados?.map((r, i) => (
+                                            <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'10px 0',borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                                <span style={{color: r.acertou ? '#22c55e' : '#ef4444',fontSize:20,fontWeight:'bold'}}>{r.acertou ? '✓' : '✗'}</span>
+                                                <span style={{color:'#f8fafc',fontWeight:500,flex:1}}>{r.palavraEsperada}</span>
+                                                <span style={{color:'#94a3b8',fontSize:13}}>{r.feedback}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                    {loading && <div style={{display:'flex',gap:6,padding:16}}><span className="pulse" style={{color:'#6366f1',fontSize:20}}>●</span><span className="pulse" style={{color:'#6366f1',fontSize:20,animationDelay:'0.2s'}}>●</span><span className="pulse" style={{color:'#6366f1',fontSize:20,animationDelay:'0.4s'}}>●</span></div>}
+                    <div ref={endRef} />
+                </div>
+            </div>
+
+            {/* Recording Controls */}
+            <div className="card no-print" style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,padding:20}}>
+                {audioBlob ? (
+                    <>
+                        <audio src={URL.createObjectURL(audioBlob)} controls style={{height:40,flex:1,maxWidth:300}} />
+                        <button onClick={() => setAudioBlob(null)} className="btn btn-danger">❌ Cancelar</button>
+                        <button onClick={sendAudio} className="btn btn-success" disabled={loading}>{loading ? '⏳' : '📤'} Enviar</button>
+                    </>
+                ) : (
+                    <button onClick={recording ? stopRec : startRec} className={`btn ${recording ? 'btn-danger pulse' : 'btn-primary'}`} style={{padding:'16px 48px',fontSize:18}}>
+                        <span style={{marginRight:12,fontSize:24}}>{recording ? '⏹️' : '🎤'}</span>
+                        {recording ? 'Parar Gravação' : 'Gravar Áudio'}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ==================== HISTORY PAGE ====================
+function HistoryPage({ user, token, sessoes }) {
+    // Dados simulados de evolução
+    const evolucao = [
+        { data: '01/12', pontuacao: 65 },
+        { data: '02/12', pontuacao: 70 },
+        { data: '03/12', pontuacao: 68 },
+        { data: '04/12', pontuacao: 78 },
+        { data: '05/12', pontuacao: 82 },
+    ];
+    const maxPont = Math.max(...evolucao.map(e => e.pontuacao));
+
+    return (
+        <div>
+            <h1 style={{color:'#f8fafc',fontSize:28,marginBottom:24}}>📊 Histórico e Evolução</h1>
+
+            {/* Gráfico de Evolução */}
+            <div className="card" style={{marginBottom:24}}>
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:20}}>Evolução da Pontuação</h2>
+                <div style={{display:'flex',alignItems:'flex-end',gap:16,height:200,padding:'0 20px'}}>
+                    {evolucao.map((e, i) => (
+                        <div key={i} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+                            <span style={{color:'#f8fafc',fontSize:14,fontWeight:600}}>{e.pontuacao}%</span>
+                            <div style={{width:'100%',background:'linear-gradient(180deg,#6366f1,#8b5cf6)',borderRadius:8,height:`${(e.pontuacao/100)*150}px`,transition:'height 0.5s'}} />
+                            <span style={{color:'#64748b',fontSize:12}}>{e.data}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Lista de Sessões */}
+            <div className="card">
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
+                    <h2 style={{color:'#f8fafc',fontSize:20,margin:0}}>Sessões Realizadas</h2>
+                    <button onClick={() => {
+                        const element = document.getElementById('historico-completo');
+                        html2pdf().set({ margin: 10, filename: `historico-${user.nome}-${Date.now()}.pdf` }).from(element).save();
+                    }} className="btn btn-secondary">
+                        📄 Exportar PDF
+                    </button>
+                </div>
+                <div id="historico-completo">
+                    <h3 style={{color:'#94a3b8',marginBottom:16,display:'none'}}>Histórico de {user.nome}</h3>
+                    {sessoes.length === 0 ? (
+                        <p style={{color:'#64748b',textAlign:'center',padding:32}}>Nenhuma sessão encontrada.</p>
+                    ) : (
+                        <table style={{width:'100%',borderCollapse:'collapse'}}>
+                            <thead>
+                                <tr style={{borderBottom:'1px solid rgba(255,255,255,0.1)'}}>
+                                    <th style={{textAlign:'left',padding:12,color:'#94a3b8',fontWeight:500}}>Data</th>
+                                    <th style={{textAlign:'left',padding:12,color:'#94a3b8',fontWeight:500}}>Tipo</th>
+                                    <th style={{textAlign:'left',padding:12,color:'#94a3b8',fontWeight:500}}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sessoes.map((s, i) => (
+                                    <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+                                        <td style={{padding:12,color:'#f8fafc'}}>{s.data || '-'}</td>
+                                        <td style={{padding:12,color:'#f8fafc'}}>{s.tipo || 'Treino'}</td>
+                                        <td style={{padding:12}}><span className="badge badge-success">{s.status || 'Concluída'}</span></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ==================== REPORTS PAGE ====================
+function ReportsPage({ user, token }) {
+    const [generating, setGenerating] = useState(false);
+
+    const generateReport = async () => {
+        setGenerating(true);
+        // Simula geração de relatório
+        setTimeout(() => {
+            const reportContent = document.getElementById('report-content');
+            html2pdf().set({
+                margin: 15,
+                filename: `relatorio-${user.nome}-${new Date().toISOString().split('T')[0]}.pdf`,
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(reportContent).save();
+            setGenerating(false);
+        }, 1000);
+    };
+
+    return (
+        <div>
+            <h1 style={{color:'#f8fafc',fontSize:28,marginBottom:24}}>📄 Relatórios</h1>
+
+            <div className="card" style={{marginBottom:24}}>
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:16}}>Gerar Relatório</h2>
+                <p style={{color:'#94a3b8',marginBottom:20}}>Exporte um relatório completo do seu progresso em formato PDF.</p>
+                <div style={{display:'flex',gap:12}}>
+                    <button onClick={generateReport} className="btn btn-primary" disabled={generating}>
+                        {generating ? '⏳ Gerando...' : '📄 Gerar Relatório Completo'}
+                    </button>
+                </div>
+            </div>
+
+            {/* Conteúdo do Relatório (escondido, usado para PDF) */}
+            <div id="report-content" style={{background:'#fff',color:'#000',padding:40,borderRadius:16}}>
+                <div style={{textAlign:'center',marginBottom:32,borderBottom:'2px solid #6366f1',paddingBottom:24}}>
+                    <h1 style={{color:'#6366f1',fontSize:28,margin:0}}>🗣️ FonoFlow</h1>
+                    <p style={{color:'#666',marginTop:8}}>Relatório de Progresso</p>
+                </div>
+
+                <div style={{marginBottom:24}}>
+                    <h2 style={{color:'#333',fontSize:20,marginBottom:12}}>Dados do Paciente</h2>
+                    <table style={{width:'100%'}}>
+                        <tbody>
+                            <tr><td style={{padding:8,color:'#666'}}>Nome:</td><td style={{padding:8,fontWeight:600}}>{user.nome}</td></tr>
+                            <tr><td style={{padding:8,color:'#666'}}>ID:</td><td style={{padding:8}}>{user.id}</td></tr>
+                            <tr><td style={{padding:8,color:'#666'}}>Data do Relatório:</td><td style={{padding:8}}>{new Date().toLocaleDateString('pt-BR')}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style={{marginBottom:24}}>
+                    <h2 style={{color:'#333',fontSize:20,marginBottom:12}}>Resumo de Desempenho</h2>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16}}>
+                        <div style={{background:'#f0f9ff',padding:16,borderRadius:12,textAlign:'center'}}>
+                            <div style={{fontSize:28,fontWeight:700,color:'#6366f1'}}>5</div>
+                            <div style={{color:'#666',fontSize:13}}>Sessões Realizadas</div>
+                        </div>
+                        <div style={{background:'#f0fdf4',padding:16,borderRadius:12,textAlign:'center'}}>
+                            <div style={{fontSize:28,fontWeight:700,color:'#22c55e'}}>78%</div>
+                            <div style={{color:'#666',fontSize:13}}>Pontuação Média</div>
+                        </div>
+                        <div style={{background:'#fefce8',padding:16,borderRadius:12,textAlign:'center'}}>
+                            <div style={{fontSize:28,fontWeight:700,color:'#eab308'}}>+13%</div>
+                            <div style={{color:'#666',fontSize:13}}>Evolução</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{marginBottom:24}}>
+                    <h2 style={{color:'#333',fontSize:20,marginBottom:12}}>Observações</h2>
+                    <p style={{color:'#666',lineHeight:1.8}}>
+                        O paciente demonstra progresso consistente nas sessões de treino. 
+                        Recomenda-se continuar praticando os fonemas R e L, onde foram identificadas 
+                        as maiores oportunidades de melhoria. O engajamento com a plataforma tem sido positivo.
+                    </p>
+                </div>
+
+                <div style={{borderTop:'1px solid #eee',paddingTop:16,textAlign:'center',color:'#999',fontSize:12}}>
+                    FonoFlow - Sistema de Treino de Pronúncia com IA<br/>
+                    Relatório gerado automaticamente em {new Date().toLocaleString('pt-BR')}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ==================== PROFILE PAGE ====================
+function ProfilePage({ user, token, especialistas, selectedEsp, setSelectedEsp }) {
+    return (
+        <div>
+            <h1 style={{color:'#f8fafc',fontSize:28,marginBottom:24}}>👤 Meu Perfil</h1>
+
+            <div className="card" style={{marginBottom:24}}>
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:20}}>Informações Pessoais</h2>
+                <div style={{display:'grid',gap:16}}>
+                    <div>
+                        <label style={{color:'#94a3b8',fontSize:13,display:'block',marginBottom:8}}>Nome</label>
+                        <div style={{color:'#f8fafc',fontSize:16,fontWeight:500}}>{user.nome}</div>
+                    </div>
+                    <div>
+                        <label style={{color:'#94a3b8',fontSize:13,display:'block',marginBottom:8}}>Tipo de Usuário</label>
+                        <div style={{color:'#f8fafc',fontSize:16,fontWeight:500}}>{user.tipo}</div>
+                    </div>
+                    <div>
+                        <label style={{color:'#94a3b8',fontSize:13,display:'block',marginBottom:8}}>ID</label>
+                        <div style={{color:'#f8fafc',fontSize:16,fontWeight:500}}>{user.id}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card">
+                <h2 style={{color:'#f8fafc',fontSize:20,marginBottom:20}}>Fonoaudiólogo Selecionado</h2>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:16}}>
+                    {especialistas.map(esp => (
+                        <div key={esp.id} onClick={() => setSelectedEsp(esp)}
+                            style={{display:'flex',alignItems:'center',gap:16,padding:16,
+                            background: selectedEsp?.id === esp.id ? 'rgba(99,102,241,0.2)' : 'rgba(15,23,42,0.6)',
+                            borderRadius:12,border: selectedEsp?.id === esp.id ? '2px solid #6366f1' : '2px solid transparent',
+                            cursor:'pointer',transition:'all 0.2s'}}>
+                            <span style={{fontSize:40}}>👩‍⚕️</span>
+                            <div>
+                                <div style={{color:'#f8fafc',fontWeight:600}}>{esp.nome}</div>
+                                <div style={{color:'#a5b4fc',fontSize:13}}>{esp.especialidade || 'Fonoaudiologia'}</div>
+                                <div style={{color:'#64748b',fontSize:12}}>CRM: {esp.crmFono || 'N/A'}</div>
+                            </div>
+                            {selectedEsp?.id === esp.id && <span style={{marginLeft:'auto',color:'#6366f1',fontSize:24}}>✓</span>}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ==================== RENDER ====================
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
